@@ -1,11 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import {
-  Menu,
-  X,
-  ArrowRight,
-  Sparkles,
-} from "lucide-react";
+import { Menu, X, ArrowRight, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const Navbar = () => {
@@ -71,17 +66,20 @@ const Navbar = () => {
           </div>
 
           <div className="hidden md:flex items-center space-x-4">
-            <Button
-              variant="ghost"
-              className="text-gray-700 hover:text-purple-600 hover:bg-purple-50 transition-all duration-300"
+            <a
+              href="/login"
+              className="text-gray-700 hover:text-purple-600 hover:bg-purple-50 transition-all duration-300 px-4 py-2 rounded-md text-sm font-medium"
             >
               Masuk
-            </Button>
+            </a>
             <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-              <Button className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white shadow-lg hover:shadow-xl transition-all duration-300">
+              <a
+                href="/register"
+                className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 px-4 py-2 rounded-md text-sm font-medium inline-flex items-center"
+              >
                 Mulai Gratis
                 <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
+              </a>
             </motion.div>
           </div>
 
@@ -128,12 +126,18 @@ const Navbar = () => {
               </motion.a>
             ))}
             <div className="flex flex-col space-y-3 px-4 pt-4 border-t border-gray-200">
-              <Button variant="ghost" className="justify-start hover:bg-purple-50">
+              <a
+                href="/login"
+                className="block w-full text-left text-gray-700 hover:bg-purple-50 px-4 py-2 rounded-md transition-all duration-300"
+              >
                 Masuk
-              </Button>
-              <Button className="bg-gradient-to-r from-purple-600 to-blue-600 text-white justify-start">
+              </a>
+              <a
+                href="/register"
+                className="block w-full text-left bg-gradient-to-r from-purple-600 to-blue-600 text-white px-4 py-2 rounded-md transition-all duration-300"
+              >
                 Mulai Gratis
-              </Button>
+              </a>
             </div>
           </div>
         </div>

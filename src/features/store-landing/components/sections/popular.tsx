@@ -25,7 +25,10 @@ export default function Popular({ getRandomImage }: CategoryProps) {
             <div className="text-sm text-yellow-600 font-semibold mb-2">TOP PICKS</div>
             <h2 className="text-3xl font-bold">Bestsellers</h2>
           </div>
-          <a href="#" className="text-yellow-600 font-semibold flex items-center hover:underline">
+          <a
+            href="/collections"
+            className="text-yellow-600 font-semibold flex items-center hover:underline"
+          >
             View All <ChevronRight size={16} />
           </a>
         </div>
