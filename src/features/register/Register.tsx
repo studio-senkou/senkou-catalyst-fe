@@ -5,21 +5,44 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Eye,
   EyeOff,
-  Zap,
   ArrowRight,
   Shield,
-  Users,
   TrendingUp,
   UserPlus,
   Sparkles,
+  Check,
+  X,
+  AlertCircle,
+  Loader2,
+  Phone,
 } from "lucide-react";
+import { apiUser } from "@/api/api-user";
+
+// Using global types - no need to redefine interfaces
 
 export default function Register() {
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [currentFeature, setCurrentFeature] = useState(0);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string>("");
+  const [success, setSuccess] = useState<string>("");
+
+  // Form state
+  const [formData, setFormData] = useState<RegisterRequest>({
+    name: "",
+    email: "",
+    phone: "",
+    password: "",
+    password_confirmation: "",
+  });
+
+  const [passwordsMatch, setPasswordsMatch] = useState<boolean | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const features = [
     { icon: Sparkles, text: "Gratis Selamanya", color: "from-purple-500 to-purple-600" },
@@ -33,6 +56,112 @@ export default function Register() {
     }, 3000);
     return () => clearInterval(interval);
   }, []);
+
+  // Check password match whenever either password changes
+  useEffect(() => {
+    if (formData.password_confirmation.length > 0) {
+      setPasswordsMatch(formData.password === formData.password_confirmation);
+    } else {
+      setPasswordsMatch(null);
+    }
+  }, [formData.password, formData.password_confirmation]);
+
+  // Handle input changes
+  const handleInputChange = (field: keyof RegisterRequest, value: string) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+
+    // Clear field-specific error when user starts typing
+    if (fieldErrors[field]) {
+      setFieldErrors((prev) => ({ ...prev, [field]: "" }));
+    }
+
+    // Clear general error when user makes changes
+    if (error) {
+      setError("");
+    }
+  };
+
+  // Form validation
+  const validateForm = (): boolean => {
+    const errors: Record<string, string> = {};
+
+    if (!formData.name.trim()) {
+      errors.name = "Nama lengkap wajib diisi";
+    } else if (formData.name.trim().length < 2) {
+      errors.name = "Nama harus minimal 2 karakter";
+    }
+
+    if (!formData.email.trim()) {
+      errors.email = "Email wajib diisi";
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      errors.email = "Format email tidak valid";
+    }
+
+    if (!formData.phone.trim()) {
+      errors.phone = "Nomor telepon wajib diisi";
+    } else if (!/^[0-9+\-\s()]{8,}$/.test(formData.phone.replace(/\s/g, ""))) {
+      errors.phone = "Format nomor telepon tidak valid";
+    }
+
+    if (!formData.password) {
+      errors.password = "Password wajib diisi";
+    } else if (formData.password.length < 8) {
+      errors.password = "Password harus minimal 8 karakter";
+    }
+
+    if (!formData.password_confirmation) {
+      errors.password_confirmation = "Konfirmasi password wajib diisi";
+    } else if (formData.password !== formData.password_confirmation) {
+      errors.password_confirmation = "Konfirmasi password tidak cocok";
+    }
+
+    setFieldErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  // Handle registration
+  const handleRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!validateForm()) {
+      return;
+    }
+
+    setIsLoading(true);
+    setError("");
+    setSuccess("");
+
+    try {
+      const response = await apiUser.register(formData);
+
+      setSuccess(response.message || "Registrasi berhasil! Selamat datang di platform kami.");
+
+      // Optional: Redirect after successful registration
+      setTimeout(() => {
+        // You can redirect to login page or dashboard here
+        window.location.href = "/login";
+        console.log("Registration successful:", response.data);
+      }, 2000);
+    } catch (err: any) {
+      setError(err.message || "Terjadi kesalahan saat mendaftar. Silakan coba lagi.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Check if form is valid
+  const isFormValid = () => {
+    return (
+      formData.name.trim().length >= 2 &&
+      formData.email.trim() &&
+      /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email) &&
+      formData.phone.trim().length >= 8 && // Validasi phone
+      formData.password.length >= 8 &&
+      formData.password_confirmation &&
+      passwordsMatch === true &&
+      !isLoading
+    );
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-purple-50 to-blue-50 flex items-center justify-center p-4 overflow-hidden relative">
@@ -92,7 +221,7 @@ export default function Register() {
             <Card className="relative overflow-hidden backdrop-blur-xl bg-white/90 border-white/20 shadow-2xl">
               <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent" />
               <CardContent className="relative p-8">
-                <form>
+                <form onSubmit={handleRegister}>
                   <div className="space-y-6">
                     <motion.div
                       className="text-center space-y-2"
@@ -108,6 +237,33 @@ export default function Register() {
                       </p>
                     </motion.div>
 
+                    {/* Success/Error Messages */}
+                    {success && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.3 }}
+                      >
+                        <Alert className="border-green-200 bg-green-50">
+                          <Check className="h-4 w-4 text-green-600" />
+                          <AlertDescription className="text-green-800">{success}</AlertDescription>
+                        </Alert>
+                      </motion.div>
+                    )}
+
+                    {error && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.3 }}
+                      >
+                        <Alert className="border-red-200 bg-red-50">
+                          <AlertCircle className="h-4 w-4 text-red-600" />
+                          <AlertDescription className="text-red-800">{error}</AlertDescription>
+                        </Alert>
+                      </motion.div>
+                    )}
+
                     <motion.div
                       className="space-y-4"
                       initial={{ opacity: 0, y: 20 }}
@@ -122,9 +278,21 @@ export default function Register() {
                           id="name"
                           type="text"
                           placeholder="Nama Anda"
-                          required
-                          className="h-12 bg-white/50 border-gray-200 focus:border-green-400 focus:ring-green-400"
+                          value={formData.name}
+                          onChange={(e) => handleInputChange("name", e.target.value)}
+                          disabled={isLoading}
+                          className={cn(
+                            "h-12 bg-white/50 border-gray-200 focus:border-green-400 focus:ring-green-400",
+                            fieldErrors.name &&
+                              "border-red-400 focus:border-red-400 focus:ring-red-400",
+                          )}
                         />
+                        {fieldErrors.name && (
+                          <p className="text-sm text-red-600 flex items-center space-x-1">
+                            <X className="h-4 w-4" />
+                            <span>{fieldErrors.name}</span>
+                          </p>
+                        )}
                       </div>
 
                       <div className="space-y-2">
@@ -135,9 +303,39 @@ export default function Register() {
                           id="email"
                           type="email"
                           placeholder="nama@contoh.com"
-                          required
-                          className="h-12 bg-white/50 border-gray-200 focus:border-green-400 focus:ring-green-400"
+                          value={formData.email}
+                          onChange={(e) => handleInputChange("email", e.target.value)}
+                          disabled={isLoading}
+                          className={cn(
+                            "h-12 bg-white/50 border-gray-200 focus:border-green-400 focus:ring-green-400",
+                            fieldErrors.email &&
+                              "border-red-400 focus:border-red-400 focus:ring-red-400",
+                          )}
                         />
+                        {fieldErrors.email && (
+                          <p className="text-sm text-red-600 flex items-center space-x-1">
+                            <X className="h-4 w-4" />
+                            <span>{fieldErrors.email}</span>
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="phone" className="text-gray-700 font-medium">
+                          Nomor Telepon
+                        </Label>
+                        <div className="relative">
+                          <Input
+                            id="phone"
+                            type="tel"
+                            placeholder="08xxxxxxxxxx atau +62xxxxxxxxx"
+                            value={formData.phone}
+                            onChange={(e) => handleInputChange("phone", e.target.value)}
+                            disabled={isLoading}
+                            className="h-12 bg-white/50 border-gray-200 focus:border-green-400 focus:ring-green-400 pl-12"
+                          />
+                          <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                        </div>
                       </div>
 
                       <div className="space-y-2">
@@ -149,13 +347,20 @@ export default function Register() {
                             id="password"
                             type={showPassword ? "text" : "password"}
                             placeholder="Minimal 8 karakter"
-                            required
-                            className="h-12 bg-white/50 border-gray-200 focus:border-green-400 focus:ring-green-400 pr-12"
+                            value={formData.password}
+                            onChange={(e) => handleInputChange("password", e.target.value)}
+                            disabled={isLoading}
+                            className={cn(
+                              "h-12 bg-white/50 border-gray-200 focus:border-green-400 focus:ring-green-400 pr-12",
+                              fieldErrors.password &&
+                                "border-red-400 focus:border-red-400 focus:ring-red-400",
+                            )}
                           />
                           <button
                             type="button"
                             onClick={() => setShowPassword(!showPassword)}
-                            className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                            disabled={isLoading}
+                            className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 disabled:opacity-50"
                           >
                             {showPassword ? (
                               <EyeOff className="h-5 w-5" />
@@ -164,6 +369,99 @@ export default function Register() {
                             )}
                           </button>
                         </div>
+                        {fieldErrors.password && (
+                          <p className="text-sm text-red-600 flex items-center space-x-1">
+                            <X className="h-4 w-4" />
+                            <span>{fieldErrors.password}</span>
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label
+                          htmlFor="password_confirmation"
+                          className="text-gray-700 font-medium"
+                        >
+                          Konfirmasi Password
+                        </Label>
+                        <div className="relative">
+                          <Input
+                            id="password_confirmation"
+                            type={showConfirmPassword ? "text" : "password"}
+                            placeholder="Ulangi password Anda"
+                            value={formData.password_confirmation}
+                            onChange={(e) =>
+                              handleInputChange("password_confirmation", e.target.value)
+                            }
+                            disabled={isLoading}
+                            className={cn(
+                              "h-12 bg-white/50 border-gray-200 focus:border-green-400 focus:ring-green-400 pr-20",
+                              (passwordsMatch === false || fieldErrors.password_confirmation) &&
+                                "border-red-400 focus:border-red-400 focus:ring-red-400",
+                              passwordsMatch === true &&
+                                "border-green-400 focus:border-green-400 focus:ring-green-400",
+                            )}
+                          />
+                          <div className="absolute right-3 top-1/2 transform -translate-y-1/2 flex items-center space-x-2">
+                            {/* Password match indicator */}
+                            {passwordsMatch !== null && (
+                              <motion.div
+                                initial={{ scale: 0, opacity: 0 }}
+                                animate={{ scale: 1, opacity: 1 }}
+                                transition={{ type: "spring", stiffness: 500 }}
+                              >
+                                {passwordsMatch ? (
+                                  <Check className="h-5 w-5 text-green-500" />
+                                ) : (
+                                  <X className="h-5 w-5 text-red-500" />
+                                )}
+                              </motion.div>
+                            )}
+                            {/* Eye toggle button */}
+                            <button
+                              type="button"
+                              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                              disabled={isLoading}
+                              className="text-gray-500 hover:text-gray-700 disabled:opacity-50"
+                            >
+                              {showConfirmPassword ? (
+                                <EyeOff className="h-5 w-5" />
+                              ) : (
+                                <Eye className="h-5 w-5" />
+                              )}
+                            </button>
+                          </div>
+                        </div>
+                        {/* Password match message */}
+                        {passwordsMatch !== null && !fieldErrors.password_confirmation && (
+                          <motion.div
+                            initial={{ opacity: 0, y: -10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.2 }}
+                            className={cn(
+                              "text-sm flex items-center space-x-1",
+                              passwordsMatch ? "text-green-600" : "text-red-600",
+                            )}
+                          >
+                            {passwordsMatch ? (
+                              <>
+                                <Check className="h-4 w-4" />
+                                <span>Password cocok!</span>
+                              </>
+                            ) : (
+                              <>
+                                <X className="h-4 w-4" />
+                                <span>Password tidak cocok</span>
+                              </>
+                            )}
+                          </motion.div>
+                        )}
+                        {fieldErrors.password_confirmation && (
+                          <p className="text-sm text-red-600 flex items-center space-x-1">
+                            <X className="h-4 w-4" />
+                            <span>{fieldErrors.password_confirmation}</span>
+                          </p>
+                        )}
                       </div>
                     </motion.div>
 
@@ -175,16 +473,22 @@ export default function Register() {
                     >
                       <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
                         <Button
-                          type="button"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            // TODO: handle register logic
-                          }}
-                          className="w-full h-12 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 font-medium rounded-xl shadow-lg hover:shadow-xl transition-all duration-300"
+                          type="submit"
+                          disabled={!isFormValid()}
+                          className="w-full h-12 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 font-medium rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                          <UserPlus className="mr-2 h-5 w-5" />
-                          Buat Akun Gratis
-                          <ArrowRight className="ml-2 h-5 w-5" />
+                          {isLoading ? (
+                            <>
+                              <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                              Mendaftar...
+                            </>
+                          ) : (
+                            <>
+                              <UserPlus className="mr-2 h-5 w-5" />
+                              Buat Akun Gratis
+                              <ArrowRight className="ml-2 h-5 w-5" />
+                            </>
+                          )}
                         </Button>
                       </motion.div>
 
@@ -201,7 +505,8 @@ export default function Register() {
                         <Button
                           variant="outline"
                           type="button"
-                          className="w-full h-12 bg-white/50 border-gray-200 hover:bg-white/80 transition-all duration-300"
+                          disabled={isLoading}
+                          className="w-full h-12 bg-white/50 border-gray-200 hover:bg-white/80 transition-all duration-300 disabled:opacity-50"
                         >
                           <svg
                             xmlns="http://www.w3.org/2000/svg"

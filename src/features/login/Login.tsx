@@ -8,7 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Eye, EyeOff, Zap, ArrowRight, Shield, Users, TrendingUp, AlertCircle } from "lucide-react";
-import { loginApi } from "./login-api";
+import { apiAuth } from "@/api/api-auth";
 
 interface LoginFormData {
   email: string;
@@ -93,7 +93,7 @@ export default function Login() {
     if (isAuthenticated) {
       // Try to get user ID from stored token
       try {
-        const token = loginApi.getAccessToken();
+        const token = apiAuth.getAccessToken();
         if (token) {
           const payload = JSON.parse(atob(token.split(".")[1]));
           const userId = payload.payload;

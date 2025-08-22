@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { loginApi } from '../features/login/login-api';
+import { apiAuth } from '../api/api-auth';
+import { apiUser } from '../api/api-user';
 
 export const useAuth = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -7,14 +8,14 @@ export const useAuth = () => {
 
   useEffect(() => {
     // Check authentication status on mount
-    setIsAuthenticated(loginApi.isAuthenticated());
+    setIsAuthenticated(apiAuth.isAuthenticated());
     setLoading(false);
   }, []);
 
   const login = async (credentials: LoginRequest): Promise<LoginResponse> => {
     try {
       setLoading(true);
-      const response = await loginApi.login(credentials);
+      const response = await apiAuth.login(credentials);
       setIsAuthenticated(true);
       return response;
     } catch (error) {
@@ -25,10 +26,22 @@ export const useAuth = () => {
     }
   };
 
+  const register = async (userData: RegisterRequest): Promise<RegisterResponse> => {
+    try {
+      setLoading(true);
+      const response = await apiUser.register(userData);
+      return response;
+    } catch (error) {
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const logout = async (): Promise<void> => {
     try {
       setLoading(true);
-      await loginApi.logout();
+      await apiAuth.logout();
     } catch (error) {
       console.error('Logout error:', error);
     } finally {
@@ -39,10 +52,29 @@ export const useAuth = () => {
 
   const refreshToken = async (): Promise<void> => {
     try {
-      await loginApi.refreshToken();
+      await apiAuth.refreshToken();
       setIsAuthenticated(true);
     } catch (error) {
       setIsAuthenticated(false);
+      throw error;
+    }
+  };
+
+  // Additional user-related methods
+  const getCurrentUser = async (): Promise<User> => {
+    try {
+      const response = await apiUser.getCurrentUser();
+      return response.data.user;
+    } catch (error) {
+      throw error;
+    }
+  };
+
+  const getUsers = async (): Promise<User[]> => {
+    try {
+      const response = await apiUser.getUsers();
+      return response.data.users;
+    } catch (error) {
       throw error;
     }
   };
@@ -51,7 +83,10 @@ export const useAuth = () => {
     isAuthenticated,
     loading,
     login,
+    register,
     logout,
     refreshToken,
+    getCurrentUser,
+    getUsers,
   };
 };

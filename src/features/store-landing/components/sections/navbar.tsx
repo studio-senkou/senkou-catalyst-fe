@@ -1,12 +1,16 @@
 import { useState, useEffect, useRef } from "react";
 import { Menu, X, Search, User, Heart, ShoppingBag } from "lucide-react";
+import { apiAuth } from "@/api/api-auth";
 
 export default function Navbar() {
   const searchInputRef = useRef<HTMLDivElement>(null);
+  const userDropdownRef = useRef<HTMLDivElement>(null);
 
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchPopupOpen, setSearchPopupOpen] = useState(false);
+  const [userDropdownOpen, setUserDropdownOpen] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 10);
@@ -19,20 +23,47 @@ export default function Navbar() {
       if (searchInputRef.current && !searchInputRef.current.contains(event.target as Node)) {
         setSearchPopupOpen(false);
       }
+      if (userDropdownRef.current && !userDropdownRef.current.contains(event.target as Node)) {
+        setUserDropdownOpen(false);
+      }
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const handleSearchSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSearchSubmit = (e: React.KeyboardEvent) => {
     e.preventDefault();
     setSearchPopupOpen(false);
+  };
+
+  const handleLogout = async () => {
+    if (isLoggingOut) return;
+    
+    setIsLoggingOut(true);
+    setUserDropdownOpen(false);
+    
+    try {
+      await apiAuth.logout();
+      // Redirect to home page or login page after successful logout
+      window.location.href = '/';
+    } catch (error) {
+      console.error('Logout failed:', error);
+      // Even if logout fails, tokens are cleared, so redirect anyway
+      window.location.href = '/';
+    } finally {
+      setIsLoggingOut(false);
+    }
   };
 
   const navItems = [
     { label: "Home", url: "/" },
     { label: "Collections", url: "/collections" },
     { label: "About", url: "/about" },
+  ];
+
+  const userDropdownItems = [
+    { label: "Profile", url: "/profile", isAction: false },
+    { label: "Logout", action: handleLogout, isAction: true },
   ];
 
   return (
@@ -73,18 +104,23 @@ export default function Navbar() {
 
               {searchPopupOpen && (
                 <div className="absolute right-0 top-full mt-2 bg-white rounded-md shadow-lg border border-gray-200 p-4 w-72 animate-fadeIn">
-                  <form onSubmit={handleSearchSubmit}>
+                  <div>
                     <div className="relative">
                       <input
                         type="text"
                         placeholder="Search products..."
                         className="w-full pl-10 pr-4 py-2 rounded-md bg-gray-50 border border-gray-200 focus:outline-none focus:ring-1 focus:ring-yellow-600 text-sm"
                         autoFocus
+                        onKeyPress={(e) => {
+                          if (e.key === "Enter") {
+                            handleSearchSubmit(e as any);
+                          }
+                        }}
                       />
                       <Search className="absolute left-3 top-2.5 text-gray-400" size={18} />
                       <button
-                        type="submit"
                         className="absolute right-2 top-2 text-sm font-medium text-yellow-600 hover:text-yellow-700"
+                        onClick={() => setSearchPopupOpen(false)}
                       >
                         Search
                       </button>
@@ -104,30 +140,63 @@ export default function Navbar() {
                         ))}
                       </div>
                     </div>
-                  </form>
+                  </div>
                 </div>
               )}
             </div>
 
             <div className="hidden sm:flex items-center gap-2 md:gap-4">
-              {[
-                { icon: <User size={20} />, badge: null, url: "/account" },
-                { icon: <Heart size={20} />, badge: 3, url: "/wishlist" },
-              ].map((item, index) => (
-                <a
-                  key={index}
-                  href={item.url}
-                  className="hover:text-yellow-600 transition relative p-2 group"
-                >
+              {/* User dropdown */}
+              <div
+                className="relative"
+                ref={userDropdownRef}
+                onMouseEnter={() => setUserDropdownOpen(true)}
+                onMouseLeave={() => setUserDropdownOpen(false)}
+              >
+                <button className="hover:text-yellow-600 transition relative p-2 group">
                   <span className="absolute inset-0 rounded-full bg-gray-50 scale-0 transition-transform duration-200 group-hover:scale-100"></span>
-                  <span className="relative">{item.icon}</span>
-                  {item.badge && (
-                    <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-yellow-600 text-white text-xs flex items-center justify-center">
-                      {item.badge}
-                    </span>
-                  )}
-                </a>
-              ))}
+                  <User className="relative" size={20} />
+                </button>
+
+                {userDropdownOpen && (
+                  <div className="absolute right-0 top-full pt-1">
+                    <div className="bg-white rounded-md shadow-lg border border-gray-200 py-2 min-w-[120px] animate-fadeIn">
+                      {userDropdownItems.map((item, index) => (
+                        item.isAction ? (
+                          <button
+                            key={index}
+                            onClick={item.action}
+                            disabled={isLoggingOut}
+                            className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-yellow-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {isLoggingOut ? 'Logging out...' : item.label}
+                          </button>
+                        ) : (
+                          <a
+                            key={index}
+                            href={item.url}
+                            className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-yellow-600 transition-colors"
+                            onClick={() => setUserDropdownOpen(false)}
+                          >
+                            {item.label}
+                          </a>
+                        )
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Wishlist */}
+              <a href="/wishlist" className="hover:text-yellow-600 transition relative p-2 group">
+                <span className="absolute inset-0 rounded-full bg-gray-50 scale-0 transition-transform duration-200 group-hover:scale-100"></span>
+                <span className="relative">
+                  <Heart size={20} />
+                </span>
+                <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-yellow-600 text-white text-xs flex items-center justify-center">
+                  3
+                </span>
+              </a>
             </div>
 
             <button
@@ -181,10 +250,38 @@ export default function Navbar() {
                   </a>
                 ))}
               </div>
+
+              {/* Mobile logout button */}
+              <div className="pt-4 border-t border-gray-100">
+                <button
+                  onClick={handleLogout}
+                  disabled={isLoggingOut}
+                  className="w-full text-left px-2 py-2 text-sm uppercase font-medium text-red-600 hover:text-red-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isLoggingOut ? 'Logging out...' : 'Logout'}
+                </button>
+              </div>
             </nav>
           </div>
         )}
       </div>
+
+      <style>{`
+        @keyframes fadeIn {
+          from {
+            opacity: 0;
+            transform: translateY(-10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        
+        .animate-fadeIn {
+          animation: fadeIn 0.2s ease-out forwards;
+        }
+      `}</style>
     </header>
   );
 }

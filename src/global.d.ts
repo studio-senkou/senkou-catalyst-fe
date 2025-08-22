@@ -28,8 +28,33 @@ declare global {
     password: string;
   }
 
+  interface RegisterRequest {
+    name: string;
+    email: string;
+    phone: string;
+    password: string;
+    password_confirmation: string;
+  }
+
   interface RefreshTokenRequest {
     refreshToken: string;
+  }
+
+  interface User {
+    id: number;
+    name: string;
+    email: string;
+    phone: string;
+    role?: string;
+    created_at?: string;
+    updated_at?: string;
+    merchants?: Merchant[];
+  }
+
+  interface Merchant {
+    id: string;
+    name: string;
+    owner_id: number;
   }
 
   interface LoginResponse {
@@ -39,6 +64,28 @@ declare global {
       access_token_expiry: string;
       refresh_token: string;
       refresh_token_expiry: string;
+      user: User;
+    };
+  }
+
+  interface RegisterResponse {
+    message: string;
+    data: {
+      user: User;
+    };
+  }
+
+  interface GetUsersResponse {
+    message: string;
+    data: {
+      users: User[];
+    };
+  }
+
+  interface GetUserDetailResponse {
+    message: string;
+    data: {
+      user: User;
     };
   }
 
@@ -54,18 +101,5 @@ declare global {
 
   interface LogoutResponse {
     message: string;
-  }
-
-  interface ApiError {
-    message: string;
-    error?: string | Record<string, any>;
-  }
-
-  interface User {
-    id: number;
-    email: string;
-    name: string;
-    createdAt: string;
-    updatedAt: string;
   }
 }
