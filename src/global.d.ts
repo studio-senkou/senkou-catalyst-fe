@@ -2,18 +2,50 @@
 export {};
 
 declare global {
+  // Updated Product interface for admin panel
   interface Product {
     id: number;
     name: string;
-    price: string;
-    rating: string;
-    isNew?: boolean;
+    category: string;
+    price: number; // Changed to number for admin calculations
+    stock: number;
+    status: 'Active' | 'Inactive';
     image: string;
-    category?: string;
+    description?: string;
     brand?: string;
+    // Keep existing fields for compatibility
+    rating?: string;
+    isNew?: boolean;
     bgColor?: string;
     originalPrice?: string;
     discount?: string;
+  }
+
+  // New interface for adding products
+  interface NewProduct {
+    name: string;
+    description?: string;
+    category: string;
+    price: number;
+    stock: number;
+    image: string;
+  }
+
+  // Modal props interface
+  interface AddProductModalProps {
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+    onSubmit: (product: NewProduct) => void;
+  }
+
+  // Form data interface for the modal
+  interface ProductFormData {
+    name: string;
+    description: string;
+    category: string;
+    price: string;
+    stock: string;
+    image: string;
   }
 
   interface Testimonial {

@@ -1,5 +1,6 @@
 import * as React from "react";
 import { LayoutDashboard, Package, FolderTree, Zap } from "lucide-react";
+import { useLocation } from "react-router-dom";
 
 import { NavUser } from "./nav-user";
 import {
@@ -40,24 +41,34 @@ const data = {
   navMain: [
     {
       title: "Dashboard",
-      url: "#",
+      url: "dashboard",
       icon: LayoutDashboard,
-      isActive: true,
     },
     {
       title: "Products",
-      url: "#",
+      url: "products",
       icon: Package,
     },
     {
       title: "Categories",
-      url: "#",
+      url: "categories",
       icon: FolderTree,
     },
   ],
 };
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+  const location = useLocation();
+  const currentPath = location.pathname.split("/").pop() || location.pathname.slice(1);
+
+  const isMenuActive = (url: string) => {
+    if (!currentPath || currentPath === "") {
+      return url === "dashboard";
+    }
+
+    return currentPath === url || currentPath.includes(url);
+  };
+
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
@@ -69,7 +80,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             <SidebarMenu>
               {data.navMain.map((item) => (
                 <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild isActive={item.isActive} tooltip={item.title}>
+                  <SidebarMenuButton asChild isActive={isMenuActive(item.url)} tooltip={item.title}>
                     <a href={item.url}>
                       <item.icon />
                       <span>{item.title}</span>
