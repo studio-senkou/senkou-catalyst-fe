@@ -41,6 +41,7 @@ export default function NewArrivals({ getRandomImage }: CategoryProps) {
               rating={product.rating}
               isNew={product.isNew}
               image={getRandomImage(500, 600)}
+              category={""}
             />
           ))}
         </div>

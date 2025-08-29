@@ -27,7 +27,7 @@ interface ComparisonCardProps {
 
 const WhyCatalyst: React.FC = () => {
   const [hoveredCard, setHoveredCard] = useState<number | null>(null);
-  const [activeCard, setActiveCard] = useState<number | null>(null);
+  const [activeCard, setActiveCard] = useState<number | null>(null);    
 
   const oldWayPoints: ComparisonPoint[] = [
     { icon: Eye, text: "Tidak menarik secara visual", positive: false },
@@ -181,11 +181,9 @@ const WhyCatalyst: React.FC = () => {
     subtitle,
     isPositive,
     points,
-    visual,
     index,
   }) => {
-    const isHovered = hoveredCard === index;
-    const isActive = activeCard === index;
+    const isHovered = hoveredCard === index || activeCard === index;
 
     return (
       <div

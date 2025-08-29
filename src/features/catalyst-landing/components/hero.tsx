@@ -4,7 +4,6 @@ import {
   ShoppingBag,
   Smartphone,
   TrendingUp,
-  Check,
   Zap,
   ArrowRight,
   Play,

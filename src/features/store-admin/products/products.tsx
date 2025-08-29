@@ -69,7 +69,28 @@ import {
   ChevronsLeft,
   ChevronsRight,
 } from "lucide-react";
-import AddProductModal from "./add-product";
+// import AddProductModal from "./add-product";
+
+// Type definitions with string ID
+interface Product {
+  id: string;
+  name: string;
+  category: string;
+  price: number;
+  stock: number;
+  status: "Active" | "Inactive";
+  image: string;
+  description: string;
+}
+
+interface NewProduct {
+  name: string;
+  category: string;
+  price: number;
+  stock: number;
+  image: string;
+  description: string;
+}
 
 // Column helper for type safety
 const columnHelper = createColumnHelper<Product>();
@@ -82,10 +103,10 @@ export default function Products(): React.ReactElement {
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
 
-  // Sample products data - replace with your actual data source
+  // Sample products data with string IDs
   const [products, setProducts] = useState<Product[]>([
     {
-      id: 1,
+      id: "1",
       name: "iPhone 15 Pro",
       category: "Electronics",
       price: 15999000,
@@ -95,7 +116,7 @@ export default function Products(): React.ReactElement {
       description: "Latest iPhone with advanced features",
     },
     {
-      id: 2,
+      id: "2",
       name: "MacBook Air M3",
       category: "Electronics",
       price: 18999000,
@@ -105,7 +126,7 @@ export default function Products(): React.ReactElement {
       description: "Powerful laptop with M3 chip",
     },
     {
-      id: 3,
+      id: "3",
       name: "Samsung Galaxy S24",
       category: "Electronics",
       price: 12999000,
@@ -115,7 +136,7 @@ export default function Products(): React.ReactElement {
       description: "Android flagship smartphone",
     },
     {
-      id: 4,
+      id: "4",
       name: "iPad Pro",
       category: "Electronics",
       price: 16999000,
@@ -125,7 +146,7 @@ export default function Products(): React.ReactElement {
       description: "Professional tablet for creative work",
     },
     {
-      id: 5,
+      id: "5",
       name: "Dell XPS 13",
       category: "Electronics",
       price: 22000000,
@@ -135,7 +156,7 @@ export default function Products(): React.ReactElement {
       description: "Premium ultrabook for professionals",
     },
     {
-      id: 6,
+      id: "6",
       name: "Sony WH-1000XM5",
       category: "Audio",
       price: 4500000,
@@ -148,7 +169,7 @@ export default function Products(): React.ReactElement {
 
   const handleAddProduct = (newProduct: NewProduct): void => {
     const product: Product = {
-      id: Math.max(...products.map((p) => p.id), 0) + 1, // Better ID generation
+      id: (products.length + 1).toString(),
       ...newProduct,
       status: "Active",
     };
@@ -169,22 +190,22 @@ export default function Products(): React.ReactElement {
     return "text-green-600";
   };
 
-  const handleEditProduct = (id: number): void => {
+  const handleEditProduct = (id: string): void => {
     console.log("Edit product with id:", id);
   };
 
-  const handleDeleteProduct = (id: number): void => {
+  const handleDeleteProduct = (id: string): void => {
     if (window.confirm("Are you sure you want to delete this product?")) {
       setProducts((prevProducts) => prevProducts.filter((product: Product) => product.id !== id));
     }
   };
 
-  const handleViewProduct = (id: number): void => {
+  const handleViewProduct = (id: string): void => {
     console.log("View product with id:", id);
   };
 
   const handleDeleteSelected = (): void => {
-    const selectedIds = Object.keys(rowSelection).map((id) => parseInt(id));
+    const selectedIds = Object.keys(rowSelection);
     if (
       window.confirm(`Are you sure you want to delete ${selectedIds.length} selected products?`)
     ) {
@@ -397,6 +418,7 @@ export default function Products(): React.ReactElement {
         pageSize: 10,
       },
     },
+    getRowId: (row) => row.id, // Explicitly set row ID to use string ID
   });
 
   // Get unique categories for filter
@@ -651,12 +673,12 @@ export default function Products(): React.ReactElement {
           </div>
         </div>
 
-        {/* Add Product Modal - You'll need to implement this */}
-        <AddProductModal
+        {/* Add Product Modal */}
+        {/* <AddProductModal
           open={isAddModalOpen}
           onOpenChange={setIsAddModalOpen}
           onSubmit={handleAddProduct}
-        />
+        /> */}
       </SidebarInset>
     </SidebarProvider>
   );

@@ -46,7 +46,7 @@ const Navbar = () => {
           {/* Desktop Menu */}
           <div className="hidden md:block">
             <div className="flex items-center space-x-8">
-              {["Fitur", "Harga", "Testimoni", "Demo"].map((item, index) => (
+              {["Fitur", "Harga", "Testimoni", "Demo"].map((item) => (
                 <motion.a
                   key={item}
                   href={`#${item.toLowerCase()}`}

@@ -7,7 +7,32 @@ import { popularProducts } from "./constants/products";
 import ProductCard from "./components/productCard";
 import { Filter, ChevronDown, ChevronUp, ChevronLeft, ChevronRight } from "lucide-react";
 
-// Define filter types and extend Product for internal use
+// Utility functions
+const normalizeProduct = (product: any): Product => {
+  return {
+    id: product.id,
+    name: product.name,
+    category: product.category || "uncategorized",
+    price: product.price,
+    stock: product.stock || 0,
+    status: product.status || "active",
+    image: product.image || "",
+    description: product.description || "",
+    brand: product.brand || "",
+    rating: product.rating || "0",
+    isNew: product.isNew || false,
+    bgColor: product.bgColor || "",
+    originalPrice: product.originalPrice || "",
+    discount: product.discount || "",
+  };
+};
+
+const getNumericPrice = (price: string | number): number => {
+  if (typeof price === "number") return price;
+  return parseFloat(price.replace(/[^0-9.]/g, "")) || 0;
+};
+
+// Define filter types
 type SortOption = "newest" | "price-low" | "price-high" | "rating";
 type FilterState = {
   category: string;
@@ -46,19 +71,27 @@ export default function Collection() {
 
   useEffect(() => {
     // Set the random image generator
-    setRandomImage(() => (width: number, height: number) => {
+    const imageGenerator = (width: number, height: number) => {
       const randomSeed = Math.floor(Math.random() * 1000);
       return `https://picsum.photos/seed/${randomSeed}/${width}/${height}`;
-    });
+    };
+    setRandomImage(() => imageGenerator);
 
     // Initialize products and extract categories
     const productCategories = ["clothing", "accessories", "footwear", "jewelry"];
-    const allProducts: Product[] = [...popularProducts].map((product) => ({
-      ...product,
-      category: productCategories[Math.floor(Math.random() * productCategories.length)],
-      // Generate image for each product since they don't have one
-      image: getRandomImage ? getRandomImage(500, 600) : "",
-    }));
+
+    // Normalize and enhance products
+    const allProducts: Product[] = popularProducts.map((product: any) => {
+      const normalizedProduct = normalizeProduct(product);
+
+      return {
+        ...normalizedProduct,
+        category: productCategories[Math.floor(Math.random() * productCategories.length)],
+        image: normalizedProduct.image || imageGenerator(500, 600),
+        stock: Math.floor(Math.random() * 100) + 1, // Random stock for demo
+        status: "active",
+      };
+    });
 
     setProducts(allProducts);
 
@@ -78,9 +111,9 @@ export default function Collection() {
       result = result.filter((product) => product.category === filters.category);
     }
 
-    // Apply price filter - convert string price to number for comparison
+    // Apply price filter - handle both string and number prices
     result = result.filter((product) => {
-      const numPrice = parseFloat(product.price.replace(/[^0-9.]/g, ""));
+      const numPrice = getNumericPrice(product.price);
       return numPrice >= filters.minPrice && numPrice <= filters.maxPrice;
     });
 
@@ -92,27 +125,26 @@ export default function Collection() {
     // Apply sorting
     switch (filters.sort) {
       case "newest":
-        // Assuming newer items have higher IDs
         result = [...result].sort((a, b) => Number(b.id) - Number(a.id));
         break;
       case "price-low":
         result = [...result].sort((a, b) => {
-          const priceA = parseFloat(a.price.replace(/[^0-9.]/g, ""));
-          const priceB = parseFloat(b.price.replace(/[^0-9.]/g, ""));
+          const priceA = getNumericPrice(a.price);
+          const priceB = getNumericPrice(b.price);
           return priceA - priceB;
         });
         break;
       case "price-high":
         result = [...result].sort((a, b) => {
-          const priceA = parseFloat(a.price.replace(/[^0-9.]/g, ""));
-          const priceB = parseFloat(b.price.replace(/[^0-9.]/g, ""));
+          const priceA = getNumericPrice(a.price);
+          const priceB = getNumericPrice(b.price);
           return priceB - priceA;
         });
         break;
       case "rating":
         result = [...result].sort((a, b) => {
-          const ratingA = parseFloat(a.rating);
-          const ratingB = parseFloat(b.rating);
+          const ratingA = parseFloat(a.rating || "0");
+          const ratingB = parseFloat(b.rating || "0");
           return ratingB - ratingA;
         });
         break;
@@ -145,41 +177,33 @@ export default function Collection() {
     const pages: (number | string)[] = [];
 
     if (totalPages <= maxPagesToShow) {
-      // If total pages is less than max to show, display all pages
       for (let i = 1; i <= totalPages; i++) {
         pages.push(i);
       }
     } else {
-      // Always show first page
       pages.push(1);
 
-      // Calculate start and end page numbers
       let startPage = Math.max(2, currentPage - 1);
       let endPage = Math.min(totalPages - 1, currentPage + 1);
 
-      // Adjust if at start or end
       if (currentPage <= 2) {
         endPage = 4;
       } else if (currentPage >= totalPages - 1) {
         startPage = totalPages - 3;
       }
 
-      // Add ellipsis after first page if needed
       if (startPage > 2) {
         pages.push("...");
       }
 
-      // Add middle pages
       for (let i = startPage; i <= endPage; i++) {
         pages.push(i);
       }
 
-      // Add ellipsis before last page if needed
       if (endPage < totalPages - 1) {
         pages.push("...");
       }
 
-      // Always show last page
       pages.push(totalPages);
     }
 
@@ -340,11 +364,7 @@ export default function Collection() {
               {currentProducts.map((product) => (
                 <ProductCard
                   key={product.id}
-                  id={product.id}
-                  name={product.name}
-                  price={product.price}
-                  rating={product.rating}
-                  isNew={product.isNew}
+                  {...product}
                   image={product.image || getRandomImage(500, 600)}
                 />
               ))}

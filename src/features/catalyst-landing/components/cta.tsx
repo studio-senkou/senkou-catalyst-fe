@@ -1,16 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import {
-  Star,
   Users,
-  Zap,
-  Globe,
   ArrowRight,
   Play,
-  Quote,
   Sparkles,
   Rocket,
-  Shield,
   Crown,
   MousePointer,
 } from "lucide-react";

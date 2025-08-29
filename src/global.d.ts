@@ -4,12 +4,12 @@ export {};
 declare global {
   // Updated Product interface for admin panel
   interface Product {
-    id: number;
+    id: string;
     name: string;
     category: string;
-    price: number; // Changed to number for admin calculations
-    stock: number;
-    status: 'Active' | 'Inactive';
+    price: number | string; // Changed to number for admin calculations
+    stock?: number;
+    status?: string;
     image: string;
     description?: string;
     brand?: string;

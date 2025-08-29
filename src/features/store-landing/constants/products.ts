@@ -1,6 +1,6 @@
 export const popularProducts = [
   {
-    id: 1,
+    id: "1",
     name: "Tas Selempang Kulit Asli",
     brand: "LEATHER STUDIO",
     price: "Rp 1.250.000",
@@ -9,7 +9,7 @@ export const popularProducts = [
     bgColor: "bg-amber-200",
   },
   {
-    id: 2,
+    id: "2",
     name: "Dompet Pria Kulit Sapi",
     brand: "LEATHER STUDIO",
     price: "Rp 450.000",
@@ -19,7 +19,7 @@ export const popularProducts = [
     bgColor: "bg-blue-200",
   },
   {
-    id: 3,
+    id: "3",
     name: "Ikat Pinggang Premium",
     brand: "LEATHER STUDIO",
     price: "Rp 375.000",
@@ -27,7 +27,7 @@ export const popularProducts = [
     bgColor: "bg-rose-200",
   },
   {
-    id: 4,
+    id: "4",
     name: "Sepatu Boots Kulit",
     brand: "LEATHER STUDIO",
     price: "Rp 1.899.000",
@@ -37,7 +37,7 @@ export const popularProducts = [
     bgColor: "bg-emerald-200",
   },
   {
-    id: 5,
+    id: "5",
     name: "Jaket Kulit Motor",
     brand: "LEATHER STUDIO",
     price: "Rp 2.500.000",
@@ -46,7 +46,7 @@ export const popularProducts = [
     bgColor: "bg-purple-200",
   },
   {
-    id: 6,
+    id: "6",
     name: "Aksesoris Gantungan Kunci",
     brand: "LEATHER STUDIO",
     price: "Rp 120.000",
@@ -54,7 +54,7 @@ export const popularProducts = [
     bgColor: "bg-pink-200",
   },
   {
-    id: 7,
+    id: "7",
     name: "Dompet Wanita Kulit Asli",
     brand: "LEATHER STUDIO",
     price: "Rp 495.000",
@@ -62,7 +62,7 @@ export const popularProducts = [
     bgColor: "bg-teal-200",
   },
   {
-    id: 8,
+    id: "8",
     name: "Sepatu Casual Pria",
     brand: "LEATHER STUDIO",
     price: "Rp 1.499.000",
@@ -72,7 +72,7 @@ export const popularProducts = [
     bgColor: "bg-yellow-200",
   },
   {
-    id: 9,
+    id: "9",
     name: "Jaket Kulit Wanita",
     brand: "LEATHER STUDIO",
     price: "Rp 2.750.000",
@@ -81,7 +81,7 @@ export const popularProducts = [
     bgColor: "bg-red-200",
   },
   {
-    id: 10,
+    id: "10",
     name: "Sling Bag Wanita",
     brand: "LEATHER STUDIO",
     price: "Rp 925.000",
@@ -89,7 +89,7 @@ export const popularProducts = [
     bgColor: "bg-green-200",
   },
   {
-    id: 11,
+    id: "11",
     name: "Card Holder Minimalis",
     brand: "LEATHER STUDIO",
     price: "Rp 199.000",
@@ -97,7 +97,7 @@ export const popularProducts = [
     bgColor: "bg-cyan-200",
   },
   {
-    id: 12,
+    id: "12",
     name: "Sneakers Kulit Premium",
     brand: "LEATHER STUDIO",
     price: "Rp 1.799.000",
@@ -105,7 +105,7 @@ export const popularProducts = [
     bgColor: "bg-orange-200",
   },
   {
-    id: 13,
+    id: "13",
     name: "Tas Ransel Kulit",
     brand: "LEATHER STUDIO",
     price: "Rp 1.650.000",
@@ -113,7 +113,7 @@ export const popularProducts = [
     bgColor: "bg-lime-200",
   },
   {
-    id: 14,
+    id: "14",
     name: "Dompet Panjang Wanita",
     brand: "LEATHER STUDIO",
     price: "Rp 520.000",
@@ -121,7 +121,7 @@ export const popularProducts = [
     bgColor: "bg-fuchsia-200",
   },
   {
-    id: 15,
+    id: "15",
     name: "Sabuk Gesper Besi",
     brand: "LEATHER STUDIO",
     price: "Rp 410.000",
@@ -129,7 +129,7 @@ export const popularProducts = [
     bgColor: "bg-indigo-200",
   },
   {
-    id: 16,
+    id: "16",
     name: "Tas Tangan Pria",
     brand: "LEATHER STUDIO",
     price: "Rp 1.200.000",
@@ -137,7 +137,7 @@ export const popularProducts = [
     bgColor: "bg-sky-200",
   },
   {
-    id: 17,
+    id: "17",
     name: "Jaket Kasual Kulit",
     brand: "LEATHER STUDIO",
     price: "Rp 2.300.000",
@@ -147,7 +147,7 @@ export const popularProducts = [
     bgColor: "bg-violet-200",
   },
   {
-    id: 18,
+    id: "18",
     name: "Gantungan Kartu Kulit",
     brand: "LEATHER STUDIO",
     price: "Rp 150.000",
@@ -155,7 +155,7 @@ export const popularProducts = [
     bgColor: "bg-neutral-200",
   },
   {
-    id: 19,
+    id: "19",
     name: "Loafers Kulit",
     brand: "LEATHER STUDIO",
     price: "Rp 1.550.000",
@@ -163,7 +163,7 @@ export const popularProducts = [
     bgColor: "bg-amber-100",
   },
   {
-    id: 20,
+    id: "20",
     name: "Tas Kerja Executive",
     brand: "LEATHER STUDIO",
     price: "Rp 2.100.000",

@@ -1,11 +1,8 @@
-import React, { useState } from "react";
 import { motion } from "framer-motion";
 import {
   ChevronUp,
   Heart,
   Zap,
-  Star,
-  Send,
   Facebook,
   Instagram,
   Twitter,
@@ -17,16 +14,6 @@ import {
 } from "lucide-react";
 
 const Footer = () => {
-  const [email, setEmail] = useState("");
-  const [isSubscribed, setIsSubscribed] = useState(false);
-
-  const handleSubscribe = () => {
-    if (email) {
-      setIsSubscribed(true);
-      setEmail("");
-      setTimeout(() => setIsSubscribed(false), 3000);
-    }
-  };
 
   const socialLinks = [
     { icon: Facebook, label: "Facebook", href: "#", color: "hover:text-blue-500" },

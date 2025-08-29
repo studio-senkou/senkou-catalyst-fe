@@ -1,6 +1,6 @@
 import React from "react";
 import { motion } from "framer-motion";
-import { ShoppingBag, Smartphone, Share2, TrendingUp, Zap, Globe } from "lucide-react";
+import { ShoppingBag, Smartphone, Share2, Zap, Globe } from "lucide-react";
 
 interface Feature {
   icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;

@@ -33,7 +33,6 @@ interface TestimonialCardProps {
 
 const Testimonials: React.FC = () => {
   const [currentIndex, setCurrentIndex] = useState<number>(0);
-  const [direction, setDirection] = useState<number>(0);
 
   const testimonials: Testimonial[] = [
     {
@@ -126,17 +125,14 @@ const Testimonials: React.FC = () => {
   };
 
   const nextTestimonial = () => {
-    setDirection(1);
     setCurrentIndex((prev) => (prev + 1) % testimonials.length);
   };
 
   const prevTestimonial = () => {
-    setDirection(-1);
     setCurrentIndex((prev) => (prev - 1 + testimonials.length) % testimonials.length);
   };
 
   const goToTestimonial = (index: number) => {
-    setDirection(index > currentIndex ? 1 : -1);
     setCurrentIndex(index);
   };
 

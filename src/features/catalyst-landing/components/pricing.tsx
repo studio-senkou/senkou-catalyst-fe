@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import {
   Check,
   Star,
@@ -8,7 +8,6 @@ import {
   Sparkles,
   TrendingUp,
   Shield,
-  Users,
   Globe,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -125,7 +124,7 @@ const Pricing: React.FC = () => {
   );
 
   // Interactive visual for each plan
-  const PlanVisual: React.FC<PlanVisualProps> = ({ plan, index, isHovered }) => {
+  const PlanVisual: React.FC<PlanVisualProps> = ({ plan, isHovered }) => {
     const IconComponent = plan.icon;
 
     return (

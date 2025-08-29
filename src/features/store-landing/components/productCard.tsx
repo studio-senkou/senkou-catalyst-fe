@@ -29,7 +29,7 @@ export default function ProductCard({ id, name, price, rating, isNew, image }: P
     let updatedFavorites;
     if (isFavorite) {
       // Remove from favorites
-      updatedFavorites = currentFavorites.filter((favId: number) => favId !== id);
+      updatedFavorites = currentFavorites.filter((favId: string) => favId !== id);
       console.log(`Removed from favorites: Product ID ${id}`);
     } else {
       // Add to favorites

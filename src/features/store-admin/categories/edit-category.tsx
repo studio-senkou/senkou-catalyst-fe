@@ -150,7 +150,7 @@ export default function EditCategoryModal({
           <div className="space-y-2">
             <Label className="text-sm text-muted-foreground">Merchant ID</Label>
             <div className="text-sm font-mono bg-muted px-3 py-2 rounded-md">
-              {category.merchantID}
+              {category.merchant_id}
             </div>
           </div>
 

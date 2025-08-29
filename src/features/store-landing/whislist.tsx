@@ -7,7 +7,7 @@ import { popularProducts } from "./constants/products";
 import ProductCard from "./components/productCard";
 import { Filter, ChevronDown, ChevronUp, ChevronLeft, ChevronRight } from "lucide-react";
 
-// Define filter types and extend Product for internal use
+// Define filter types
 type SortOption = "newest" | "price-low" | "price-high" | "rating";
 type FilterState = {
   category: string;
@@ -45,6 +45,18 @@ export default function Wishlist() {
   // Categories derived from products
   const [categories, setCategories] = useState<string[]>([]);
 
+  // Helper function to get numeric price
+  const getNumericPrice = (price: number | string): number => {
+    if (typeof price === "number") return price;
+    return parseFloat(price.toString().replace(/[^0-9.]/g, "")) || 0;
+  };
+
+  // Helper function to format price for display
+  const formatPrice = (price: number | string): string => {
+    const numPrice = getNumericPrice(price);
+    return `$${numPrice.toFixed(2)}`;
+  };
+
   useEffect(() => {
     // Set the random image generator
     setRandomImage(() => (width: number, height: number) => {
@@ -56,13 +68,16 @@ export default function Wishlist() {
     const productCategories = ["clothing", "accessories", "footwear", "jewelry"];
     const allProducts: Product[] = [...popularProducts].map((product) => ({
       ...product,
+      // Assign category since popularProducts doesn't have it
       category: productCategories[Math.floor(Math.random() * productCategories.length)],
-      // Generate image for each product since they don't have one
-      image: getRandomImage ? getRandomImage(500, 600) : "",
+      // Ensure price is a number
+      price: getNumericPrice(product.price),
+      // Generate image for each product if they don't have one
+      image: (product as any).image || (getRandomImage ? getRandomImage(500, 600) : ""),
     }));
 
     setProducts(allProducts);
-  }, []);
+  }, [getRandomImage]);
 
   // Filter products based on wishlist (localStorage)
   useEffect(() => {
@@ -92,9 +107,9 @@ export default function Wishlist() {
       result = result.filter((product) => product.category === filters.category);
     }
 
-    // Apply price filter - convert string price to number for comparison
+    // Apply price filter - use numeric price comparison
     result = result.filter((product) => {
-      const numPrice = parseFloat(product.price.replace(/[^0-9.]/g, ""));
+      const numPrice = getNumericPrice(product.price);
       return numPrice >= filters.minPrice && numPrice <= filters.maxPrice;
     });
 
@@ -111,22 +126,22 @@ export default function Wishlist() {
         break;
       case "price-low":
         result = [...result].sort((a, b) => {
-          const priceA = parseFloat(a.price.replace(/[^0-9.]/g, ""));
-          const priceB = parseFloat(b.price.replace(/[^0-9.]/g, ""));
+          const priceA = getNumericPrice(a.price);
+          const priceB = getNumericPrice(b.price);
           return priceA - priceB;
         });
         break;
       case "price-high":
         result = [...result].sort((a, b) => {
-          const priceA = parseFloat(a.price.replace(/[^0-9.]/g, ""));
-          const priceB = parseFloat(b.price.replace(/[^0-9.]/g, ""));
+          const priceA = getNumericPrice(a.price);
+          const priceB = getNumericPrice(b.price);
           return priceB - priceA;
         });
         break;
       case "rating":
         result = [...result].sort((a, b) => {
-          const ratingA = parseFloat(a.rating);
-          const ratingB = parseFloat(b.rating);
+          const ratingA = parseFloat(a.rating || "0");
+          const ratingB = parseFloat(b.rating || "0");
           return ratingB - ratingA;
         });
         break;
@@ -403,10 +418,11 @@ export default function Wishlist() {
                   key={product.id}
                   id={product.id}
                   name={product.name}
-                  price={product.price}
-                  rating={product.rating}
-                  isNew={product.isNew}
+                  price={formatPrice(product.price)} // Format price for display
+                  rating={product.rating || "0"}
+                  isNew={product.isNew || false}
                   image={product.image || getRandomImage(500, 600)}
+                  category={""}
                 />
               ))}
             </div>
