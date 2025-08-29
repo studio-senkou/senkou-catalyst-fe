@@ -1,19 +1,51 @@
+// api-auth.ts
 import api, { tokenManager } from "@/lib/axios";
+import { apiUser } from "./api-user";
 
 export const apiAuth = {
-  // Login user
-  async login(credentials: LoginRequest): Promise<LoginResponse> {
+  async login(credentials: LoginRequest): Promise<{
+    loginResponse: LoginResponse;
+    userResponse: GetUserDetailResponse;
+    merchantId: string;
+  }> {
     try {
-      const response = await api.post<LoginResponse>('/auth/login', credentials);
+      const loginResponse = await api.post<LoginResponse>('/auth/login', credentials);
       
-      // Save tokens using token manager
-        tokenManager.saveTokens(
-        response.data.data.access_token,    
-        response.data.data.refresh_token
-        );
+      tokenManager.saveTokens(
+        loginResponse.data.data.access_token,    
+        loginResponse.data.data.refresh_token
+      );
 
-      return response.data;
+      const userResponse = await apiUser.getCurrentUser();
+      
+      const user = userResponse.data.user;
+      let merchantId = '';
+      
+      if (user.merchants && user.merchants.length > 0) {
+        merchantId = user.merchants[0].id;
+        
+        tokenManager.saveMerchantId(merchantId);
+        
+        tokenManager.saveUserData({
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          phone: user.phone,
+          role: user.role,
+          merchants: user.merchants
+        });
+      } else {
+        throw new Error('User has no associated merchants');
+      }
+
+      return {
+        loginResponse: loginResponse.data,
+        userResponse: userResponse,
+        merchantId: merchantId
+      };
     } catch (error: any) {
+      // Clear tokens if login fails
+      tokenManager.clearTokens();
       throw new Error(error.response?.data?.message || 'Login failed');
     }
   },
@@ -31,10 +63,10 @@ export const apiAuth = {
       });
 
       // Save new tokens
-        tokenManager.saveTokens(
+      tokenManager.saveTokens(
         response.data.data.access_token,    
         response.data.data.refresh_token
-        );
+      );
 
       return response.data;
     } catch (error: any) {
@@ -64,5 +96,15 @@ export const apiAuth = {
   // Get current access token
   getAccessToken(): string | null {
     return tokenManager.getAccessToken();
+  },
+
+  // Get current merchant ID
+  getCurrentMerchantId(): string | null {
+    return tokenManager.getMerchantId();
+  },
+
+  // Get current user data
+  getCurrentUserData(): any {
+    return tokenManager.getUserData();
   },
 };

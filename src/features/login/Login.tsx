@@ -60,24 +60,16 @@ export default function Login() {
     }
 
     try {
-      const response = await login(formData);
+      // Use the updated login method that fetches user data
+      const result = await login(formData);
 
-      // Decode JWT token to get user ID
-      try {
-        const token = response.data.access_token; // menggunakan snake_case sesuai response
-        const payload = JSON.parse(atob(token.split(".")[1]));
-        const userId = payload.payload; // berdasarkan response, user ID ada di payload.payload
-
-        if (userId) {
-          navigate(`/store/${userId}`);
-          return;
-        }
-      } catch (tokenError) {
-        console.warn("Could not decode token:", tokenError);
+      if (result && result.merchantId) {
+        // Navigate to merchant-specific dashboard
+        navigate(`/merchant/${result.merchantId}/home`);
+      } else {
+        // Fallback to general dashboard
+        navigate("/dashboard");
       }
-
-      // Fallback jika tidak bisa decode token
-      navigate("/dashboard");
     } catch (err: any) {
       setError(getErrorMessage(err));
     }
@@ -91,27 +83,15 @@ export default function Login() {
   // If already authenticated, redirect immediately
   useEffect(() => {
     if (isAuthenticated) {
-      // Try to get user ID from stored token
-      try {
-        const token = apiAuth.getAccessToken();
-        if (token) {
-          const payload = JSON.parse(atob(token.split(".")[1]));
-          const userId = payload.payload;
-          if (userId) {
-            navigate(`/store/${userId}`);
-            return;
-          }
-        }
-      } catch (error) {
-        console.warn("Could not decode stored token:", error);
+      const merchantId = apiAuth.getCurrentMerchantId();
+      if (merchantId) {
+        navigate(`/merchant/${merchantId}/home`);
+      } else {
+        navigate("/dashboard");
       }
-
-      // Fallback redirect
-      navigate("/dashboard");
     }
   }, [isAuthenticated, navigate]);
 
-  // Don't render the login form if already authenticated
   if (isAuthenticated) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-green-50 flex items-center justify-center p-4">

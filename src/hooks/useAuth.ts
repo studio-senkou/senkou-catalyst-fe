@@ -1,3 +1,4 @@
+// useAuth.ts
 import { useState, useEffect } from 'react';
 import { apiAuth } from '../api/api-auth';
 import { apiUser } from '../api/api-user';
@@ -5,21 +6,44 @@ import { apiUser } from '../api/api-user';
 export const useAuth = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [merchantId, setMerchantId] = useState<string | null>(null);
+  const [userData, setUserData] = useState<any>(null);
 
   useEffect(() => {
     // Check authentication status on mount
-    setIsAuthenticated(apiAuth.isAuthenticated());
-    setLoading(false);
+    const checkAuth = () => {
+      const authenticated = apiAuth.isAuthenticated();
+      const currentMerchantId = apiAuth.getCurrentMerchantId();
+      const currentUserData = apiAuth.getCurrentUserData();
+      
+      setIsAuthenticated(authenticated);
+      setMerchantId(currentMerchantId);
+      setUserData(currentUserData);
+      setLoading(false);
+    };
+
+    checkAuth();
   }, []);
 
-  const login = async (credentials: LoginRequest): Promise<LoginResponse> => {
+  const login = async (credentials: LoginRequest): Promise<{
+    loginResponse: LoginResponse;
+    userResponse: GetUserDetailResponse;
+    merchantId: string;
+  } | null> => {
     try {
       setLoading(true);
-      const response = await apiAuth.login(credentials);
+      const result = await apiAuth.login(credentials);
+      
+      // Update state with the results
       setIsAuthenticated(true);
-      return response;
+      setMerchantId(result.merchantId);
+      setUserData(result.userResponse.data.user);
+      
+      return result;
     } catch (error) {
       setIsAuthenticated(false);
+      setMerchantId(null);
+      setUserData(null);
       throw error;
     } finally {
       setLoading(false);
@@ -46,6 +70,8 @@ export const useAuth = () => {
       console.error('Logout error:', error);
     } finally {
       setIsAuthenticated(false);
+      setMerchantId(null);
+      setUserData(null);
       setLoading(false);
     }
   };
@@ -56,6 +82,8 @@ export const useAuth = () => {
       setIsAuthenticated(true);
     } catch (error) {
       setIsAuthenticated(false);
+      setMerchantId(null);
+      setUserData(null);
       throw error;
     }
   };
@@ -64,7 +92,9 @@ export const useAuth = () => {
   const getCurrentUser = async (): Promise<User> => {
     try {
       const response = await apiUser.getCurrentUser();
-      return response.data.user;
+      const user = response.data.user;
+      setUserData(user);
+      return user;
     } catch (error) {
       throw error;
     }
@@ -79,14 +109,23 @@ export const useAuth = () => {
     }
   };
 
+  // Helper to get current merchant data
+  const getCurrentMerchant = () => {
+    if (!userData || !userData.merchants || !merchantId) return null;
+    return userData.merchants.find((merchant: any) => merchant.id === merchantId);
+  };
+
   return {
     isAuthenticated,
     loading,
+    merchantId,
+    userData,
     login,
     register,
     logout,
     refreshToken,
     getCurrentUser,
     getUsers,
+    getCurrentMerchant,
   };
 };

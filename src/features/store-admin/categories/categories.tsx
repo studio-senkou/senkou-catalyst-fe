@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   createColumnHelper,
   flexRender,
@@ -37,7 +37,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   DropdownMenu,
@@ -59,7 +58,6 @@ import {
   Search,
   Edit,
   Trash2,
-  Eye,
   ArrowUpDown,
   ChevronUp,
   ChevronDown,
@@ -68,131 +66,160 @@ import {
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
+  Loader2,
 } from "lucide-react";
+import { toast } from "sonner";
 import AddCategoryModal from "./add-category";
+import EditCategoryModal from "./edit-category";
+import { apiCategory, type Category } from "./api/api-category";
+import { apiAuth } from "@/api/api-auth";
+
+// Category interface
+interface CategoryWithActions extends Category {
+  // Add any additional fields for UI display
+}
+
+interface NewCategory {
+  name: string;
+}
 
 // Column helper for type safety
-const columnHelper = createColumnHelper<Product>();
+const columnHelper = createColumnHelper<CategoryWithActions>();
 
-export default function Products(): React.ReactElement {
+export default function Categories(): React.ReactElement {
   const [isAddModalOpen, setIsAddModalOpen] = useState<boolean>(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState<boolean>(false);
+  const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [globalFilter, setGlobalFilter] = useState<string>("");
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
+  const [categories, setCategories] = useState<CategoryWithActions[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
 
-  // Sample products data - replace with your actual data source
-  const [products, setProducts] = useState<Product[]>([
-    {
-      id: 1,
-      name: "iPhone 15 Pro",
-      category: "Electronics",
-      price: 15999000,
-      stock: 25,
-      status: "Active",
-      image: "https://via.placeholder.com/50",
-      description: "Latest iPhone with advanced features",
-    },
-    {
-      id: 2,
-      name: "MacBook Air M3",
-      category: "Electronics",
-      price: 18999000,
-      status: "Active",
-      stock: 12,
-      image: "https://via.placeholder.com/50",
-      description: "Powerful laptop with M3 chip",
-    },
-    {
-      id: 3,
-      name: "Samsung Galaxy S24",
-      category: "Electronics",
-      price: 12999000,
-      stock: 0,
-      status: "Inactive",
-      image: "https://via.placeholder.com/50",
-      description: "Android flagship smartphone",
-    },
-    {
-      id: 4,
-      name: "iPad Pro",
-      category: "Electronics",
-      price: 16999000,
-      stock: 8,
-      status: "Active",
-      image: "https://via.placeholder.com/50",
-      description: "Professional tablet for creative work",
-    },
-    {
-      id: 5,
-      name: "Dell XPS 13",
-      category: "Electronics",
-      price: 22000000,
-      stock: 15,
-      status: "Active",
-      image: "https://via.placeholder.com/50",
-      description: "Premium ultrabook for professionals",
-    },
-    {
-      id: 6,
-      name: "Sony WH-1000XM5",
-      category: "Audio",
-      price: 4500000,
-      stock: 30,
-      status: "Active",
-      image: "https://via.placeholder.com/50",
-      description: "Noise-canceling headphones",
-    },
-  ]);
+  // You'll need to get this from your auth context or props
+  const merchantID = apiAuth.getCurrentMerchantId() || "";
 
-  const handleAddProduct = (newProduct: NewProduct): void => {
-    const product: Product = {
-      id: Math.max(...products.map((p) => p.id), 0) + 1, // Better ID generation
-      ...newProduct,
-      status: "Active",
-    };
-    setProducts((prevProducts) => [...prevProducts, product]);
-    setIsAddModalOpen(false);
-  };
+  // Fetch categories on component mount
+  useEffect(() => {
+    fetchCategories();
+  }, []);
 
-  const formatPrice = (price: number): string => {
-    return new Intl.NumberFormat("id-ID", {
-      style: "currency",
-      currency: "IDR",
-    }).format(price);
-  };
-
-  const getStockColor = (stock: number): string => {
-    if (stock === 0) return "text-red-600";
-    if (stock < 10) return "text-orange-600";
-    return "text-green-600";
-  };
-
-  const handleEditProduct = (id: number): void => {
-    console.log("Edit product with id:", id);
-  };
-
-  const handleDeleteProduct = (id: number): void => {
-    if (window.confirm("Are you sure you want to delete this product?")) {
-      setProducts((prevProducts) => prevProducts.filter((product: Product) => product.id !== id));
+  const fetchCategories = async (): Promise<void> => {
+    try {
+      setIsLoading(true);
+      const response = await apiCategory.getCategories(merchantID);
+      setCategories(response.data.categories);
+      toast.success("Categories loaded successfully");
+    } catch (error: any) {
+      console.error("Error fetching categories:", error);
+      toast.error(error.message || "Failed to load categories");
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const handleViewProduct = (id: number): void => {
-    console.log("View product with id:", id);
+  const handleAddCategory = async (newCategory: NewCategory): Promise<void> => {
+    try {
+      const response = await apiCategory.createCategory(merchantID, {
+        name: newCategory.name,
+      });
+
+      setCategories((prevCategories) => [...prevCategories, response.data.category]);
+      setIsAddModalOpen(false);
+
+      toast.success("Category created successfully");
+    } catch (error: any) {
+      console.error("Error creating category:", error);
+      toast.error(error.message || "Failed to create category");
+    }
   };
 
-  const handleDeleteSelected = (): void => {
-    const selectedIds = Object.keys(rowSelection).map((id) => parseInt(id));
-    if (
-      window.confirm(`Are you sure you want to delete ${selectedIds.length} selected products?`)
-    ) {
-      setProducts((prevProducts) =>
-        prevProducts.filter((product: Product) => !selectedIds.includes(product.id)),
+  const handleEditCategory = (category: Category): void => {
+    setEditingCategory(category);
+    setIsEditModalOpen(true);
+  };
+
+  const handleUpdateCategory = async (updatedCategory: { name: string }): Promise<void> => {
+    if (!editingCategory) return;
+
+    try {
+      const response = await apiCategory.updateCategory(
+        merchantID,
+        editingCategory.id.toString(),
+        updatedCategory,
       );
-      setRowSelection({});
+
+      setCategories((prevCategories) =>
+        prevCategories.map((cat) => (cat.id === editingCategory.id ? response.data.category : cat)),
+      );
+
+      setIsEditModalOpen(false);
+      setEditingCategory(null);
+
+      toast.success("Category updated successfully");
+    } catch (error: any) {
+      console.error("Error updating category:", error);
+      toast.error(error.message || "Failed to update category");
     }
+  };
+
+  const handleDeleteCategory = async (id: number): Promise<void> => {
+    if (window.confirm("Are you sure you want to delete this category?")) {
+      try {
+        await apiCategory.deleteCategory(merchantID, id.toString());
+
+        setCategories((prevCategories) => prevCategories.filter((category) => category.id !== id));
+
+        toast.success("Category deleted successfully");
+      } catch (error: any) {
+        console.error("Error deleting category:", error);
+        toast.error(error.message || "Failed to delete category");
+      }
+    }
+  };
+
+  const handleDeleteSelected = async (): Promise<void> => {
+    const selectedIds = Object.keys(rowSelection)
+      .map((index) => {
+        const rowIndex = parseInt(index);
+        return categories[rowIndex]?.id;
+      })
+      .filter(Boolean);
+
+    if (selectedIds.length === 0) return;
+
+    if (
+      window.confirm(`Are you sure you want to delete ${selectedIds.length} selected categories?`)
+    ) {
+      try {
+        // Delete categories one by one (you might want to implement bulk delete in backend)
+        await Promise.all(
+          selectedIds.map((id) => apiCategory.deleteCategory(merchantID, id.toString())),
+        );
+
+        setCategories((prevCategories) =>
+          prevCategories.filter((category) => !selectedIds.includes(category.id)),
+        );
+
+        setRowSelection({});
+
+        toast.success(`${selectedIds.length} categories deleted successfully`);
+      } catch (error: any) {
+        console.error("Error deleting categories:", error);
+        toast.error(error.message || "Failed to delete categories");
+      }
+    }
+  };
+
+  const formatDate = (dateString?: string): string => {
+    if (!dateString) return "-";
+    return new Date(dateString).toLocaleDateString("id-ID", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
   };
 
   // Define columns
@@ -220,18 +247,27 @@ export default function Products(): React.ReactElement {
         size: 40,
       }),
 
-      // Image column
-      columnHelper.accessor("image", {
-        header: "Image",
-        cell: ({ row, getValue }) => (
-          <img
-            src={getValue()}
-            alt={row.original.name}
-            className="h-10 w-10 rounded-md object-cover"
-          />
-        ),
-        enableSorting: false,
-        enableColumnFilter: false,
+      // ID column
+      columnHelper.accessor("id", {
+        header: ({ column }) => {
+          return (
+            <Button
+              variant="ghost"
+              onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+              className="h-auto p-0 font-medium"
+            >
+              ID
+              {column.getIsSorted() === "asc" ? (
+                <ChevronUp className="ml-2 h-4 w-4" />
+              ) : column.getIsSorted() === "desc" ? (
+                <ChevronDown className="ml-2 h-4 w-4" />
+              ) : (
+                <ArrowUpDown className="ml-2 h-4 w-4" />
+              )}
+            </Button>
+          );
+        },
+        cell: ({ getValue }) => <div className="font-mono text-sm">{getValue()}</div>,
         size: 80,
       }),
 
@@ -244,7 +280,7 @@ export default function Products(): React.ReactElement {
               onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
               className="h-auto p-0 font-medium"
             >
-              Name
+              Category Name
               {column.getIsSorted() === "asc" ? (
                 <ChevronUp className="ml-2 h-4 w-4" />
               ) : column.getIsSorted() === "desc" ? (
@@ -259,56 +295,17 @@ export default function Products(): React.ReactElement {
         size: 200,
       }),
 
-      // Category column
-      columnHelper.accessor("category", {
-        header: ({ column }) => {
-          return (
-            <Button
-              variant="ghost"
-              onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-              className="h-auto p-0 font-medium"
-            >
-              Category
-              {column.getIsSorted() === "asc" ? (
-                <ChevronUp className="ml-2 h-4 w-4" />
-              ) : column.getIsSorted() === "desc" ? (
-                <ChevronDown className="ml-2 h-4 w-4" />
-              ) : (
-                <ArrowUpDown className="ml-2 h-4 w-4" />
-              )}
-            </Button>
-          );
-        },
-        filterFn: "includesString",
-        size: 120,
-      }),
-
-      // Price column
-      columnHelper.accessor("price", {
-        header: ({ column }) => {
-          return (
-            <Button
-              variant="ghost"
-              onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-              className="h-auto p-0 font-medium"
-            >
-              Price
-              {column.getIsSorted() === "asc" ? (
-                <ChevronUp className="ml-2 h-4 w-4" />
-              ) : column.getIsSorted() === "desc" ? (
-                <ChevronDown className="ml-2 h-4 w-4" />
-              ) : (
-                <ArrowUpDown className="ml-2 h-4 w-4" />
-              )}
-            </Button>
-          );
-        },
-        cell: ({ getValue }) => formatPrice(getValue()),
+      // Merchant ID column
+      columnHelper.accessor("merchant_id", {
+        header: "Merchant ID",
+        cell: ({ getValue }) => (
+          <div className="font-mono text-sm text-muted-foreground">{getValue()}</div>
+        ),
         size: 150,
       }),
 
-      // Stock column
-      columnHelper.accessor("stock", {
+      // Created At column
+      columnHelper.accessor("created_at", {
         header: ({ column }) => {
           return (
             <Button
@@ -316,7 +313,7 @@ export default function Products(): React.ReactElement {
               onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
               className="h-auto p-0 font-medium"
             >
-              Stock
+              Created At
               {column.getIsSorted() === "asc" ? (
                 <ChevronUp className="ml-2 h-4 w-4" />
               ) : column.getIsSorted() === "desc" ? (
@@ -327,18 +324,32 @@ export default function Products(): React.ReactElement {
             </Button>
           );
         },
-        cell: ({ getValue }) => <span className={getStockColor(getValue())}>{getValue()}</span>,
-        size: 100,
+        cell: ({ getValue }) => formatDate(getValue()),
+        size: 120,
       }),
 
-      // Status column
-      columnHelper.accessor("status", {
-        header: "Status",
-        cell: ({ getValue }) => (
-          <Badge variant={getValue() === "Active" ? "default" : "secondary"}>{getValue()}</Badge>
-        ),
-        filterFn: "equals",
-        size: 100,
+      // Updated At column
+      columnHelper.accessor("updated_at", {
+        header: ({ column }) => {
+          return (
+            <Button
+              variant="ghost"
+              onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+              className="h-auto p-0 font-medium"
+            >
+              Updated At
+              {column.getIsSorted() === "asc" ? (
+                <ChevronUp className="ml-2 h-4 w-4" />
+              ) : column.getIsSorted() === "desc" ? (
+                <ChevronDown className="ml-2 h-4 w-4" />
+              ) : (
+                <ArrowUpDown className="ml-2 h-4 w-4" />
+              )}
+            </Button>
+          );
+        },
+        cell: ({ getValue }) => formatDate(getValue()),
+        size: 120,
       }),
 
       // Actions column
@@ -347,16 +358,13 @@ export default function Products(): React.ReactElement {
         header: "Actions",
         cell: ({ row }) => (
           <div className="flex items-center gap-2 justify-end">
-            <Button variant="ghost" size="sm" onClick={() => handleViewProduct(row.original.id)}>
-              <Eye className="h-4 w-4" />
-            </Button>
-            <Button variant="ghost" size="sm" onClick={() => handleEditProduct(row.original.id)}>
+            <Button variant="ghost" size="sm" onClick={() => handleEditCategory(row.original)}>
               <Edit className="h-4 w-4" />
             </Button>
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => handleDeleteProduct(row.original.id)}
+              onClick={() => handleDeleteCategory(row.original.id)}
               className="text-red-600 hover:text-red-700"
             >
               <Trash2 className="h-4 w-4" />
@@ -365,7 +373,7 @@ export default function Products(): React.ReactElement {
         ),
         enableSorting: false,
         enableHiding: false,
-        size: 150,
+        size: 100,
       }),
     ],
     [rowSelection],
@@ -373,7 +381,7 @@ export default function Products(): React.ReactElement {
 
   // Create table instance
   const table = useReactTable({
-    data: products,
+    data: categories,
     columns,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
@@ -399,11 +407,21 @@ export default function Products(): React.ReactElement {
     },
   });
 
-  // Get unique categories for filter
-  const categories = useMemo(() => {
-    const uniqueCategories = Array.from(new Set(products.map((p) => p.category)));
-    return uniqueCategories;
-  }, [products]);
+  if (isLoading) {
+    return (
+      <SidebarProvider>
+        <AppSidebar />
+        <SidebarInset>
+          <div className="flex h-full items-center justify-center">
+            <div className="flex items-center gap-2">
+              <Loader2 className="h-6 w-6 animate-spin" />
+              <span>Loading categories...</span>
+            </div>
+          </div>
+        </SidebarInset>
+      </SidebarProvider>
+    );
+  }
 
   return (
     <SidebarProvider>
@@ -433,8 +451,7 @@ export default function Products(): React.ReactElement {
             <div>
               <h1 className="text-3xl font-bold tracking-tight">Categories</h1>
               <p className="text-muted-foreground">
-                Manage your product inventory and details.{" "}
-                {table.getFilteredSelectedRowModel().rows.length} of{" "}
+                Manage your product categories. {table.getFilteredSelectedRowModel().rows.length} of{" "}
                 {table.getFilteredRowModel().rows.length} row(s) selected.
               </p>
             </div>
@@ -447,7 +464,7 @@ export default function Products(): React.ReactElement {
               )}
               <Button onClick={() => setIsAddModalOpen(true)}>
                 <Plus className="mr-2 h-4 w-4" />
-                Add Product
+                Add Category
               </Button>
             </div>
           </div>
@@ -457,49 +474,12 @@ export default function Products(): React.ReactElement {
             <div className="relative flex-1 max-w-sm">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
-                placeholder="Search all columns..."
+                placeholder="Search categories..."
                 value={globalFilter ?? ""}
                 onChange={(e) => setGlobalFilter(e.target.value)}
                 className="pl-9"
               />
             </div>
-
-            {/* Category Filter */}
-            <Select
-              value={(table.getColumn("category")?.getFilterValue() as string) ?? ""}
-              onValueChange={(value) =>
-                table.getColumn("category")?.setFilterValue(value === "all" ? "" : value)
-              }
-            >
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Filter by category" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Categories</SelectItem>
-                {categories.map((category) => (
-                  <SelectItem key={category} value={category}>
-                    {category}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            {/* Status Filter */}
-            <Select
-              value={(table.getColumn("status")?.getFilterValue() as string) ?? ""}
-              onValueChange={(value) =>
-                table.getColumn("status")?.setFilterValue(value === "all" ? "" : value)
-              }
-            >
-              <SelectTrigger className="w-[150px]">
-                <SelectValue placeholder="Filter by status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="Active">Active</SelectItem>
-                <SelectItem value="Inactive">Inactive</SelectItem>
-              </SelectContent>
-            </Select>
 
             {/* Column Visibility */}
             <DropdownMenu>
@@ -523,15 +503,21 @@ export default function Products(): React.ReactElement {
                         checked={column.getIsVisible()}
                         onCheckedChange={(value) => column.toggleVisibility(!!value)}
                       >
-                        {column.id}
+                        {column.id === "merchantID"
+                          ? "Merchant ID"
+                          : column.id.replace(/([A-Z])/g, " $1").trim()}
                       </DropdownMenuCheckboxItem>
                     );
                   })}
               </DropdownMenuContent>
             </DropdownMenu>
+
+            <Button variant="outline" onClick={fetchCategories}>
+              Refresh
+            </Button>
           </div>
 
-          {/* Products Table */}
+          {/* Categories Table */}
           <div className="rounded-md border">
             <Table>
               <TableHeader>
@@ -571,7 +557,7 @@ export default function Products(): React.ReactElement {
                 ) : (
                   <TableRow>
                     <TableCell colSpan={columns.length} className="h-24 text-center">
-                      No results.
+                      No categories found.
                     </TableCell>
                   </TableRow>
                 )}
@@ -651,11 +637,19 @@ export default function Products(): React.ReactElement {
           </div>
         </div>
 
-        {/* Add Product Modal - You'll need to implement this */}
+        {/* Add Category Modal */}
         <AddCategoryModal
           open={isAddModalOpen}
           onOpenChange={setIsAddModalOpen}
-          onSubmit={handleAddProduct}
+          onSubmit={handleAddCategory}
+        />
+
+        {/* Edit Category Modal */}
+        <EditCategoryModal
+          open={isEditModalOpen}
+          onOpenChange={setIsEditModalOpen}
+          category={editingCategory}
+          onSubmit={handleUpdateCategory}
         />
       </SidebarInset>
     </SidebarProvider>

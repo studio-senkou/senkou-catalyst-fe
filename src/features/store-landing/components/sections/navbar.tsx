@@ -1,10 +1,13 @@
 import { useState, useEffect, useRef } from "react";
+import { useParams, useLocation } from "react-router-dom";
 import { Menu, X, Search, User, Heart, ShoppingBag } from "lucide-react";
 import { apiAuth } from "@/api/api-auth";
 
 export default function Navbar() {
   const searchInputRef = useRef<HTMLDivElement>(null);
   const userDropdownRef = useRef<HTMLDivElement>(null);
+  const { id: routeMerchantId } = useParams();
+  const location = useLocation();
 
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -38,31 +41,64 @@ export default function Navbar() {
 
   const handleLogout = async () => {
     if (isLoggingOut) return;
-    
+
     setIsLoggingOut(true);
     setUserDropdownOpen(false);
-    
+
     try {
       await apiAuth.logout();
       // Redirect to home page or login page after successful logout
-      window.location.href = '/';
+      window.location.href = "/";
     } catch (error) {
-      console.error('Logout failed:', error);
+      console.error("Logout failed:", error);
       // Even if logout fails, tokens are cleared, so redirect anyway
-      window.location.href = '/';
+      window.location.href = "/";
     } finally {
       setIsLoggingOut(false);
     }
   };
 
+  const getMerchantDashboardUrl = () => {
+    const merchantId = apiAuth.getCurrentMerchantId();
+    return merchantId ? `/admin/${merchantId}/dashboard` : "/login";
+  };
+
+  // Check if user button should be visible
+  const shouldShowUserButton = () => {
+    const cookieMerchantId = apiAuth.getCurrentMerchantId();
+
+    // If no merchant ID in cookies, don't show user button
+    if (!cookieMerchantId) {
+      return false;
+    }
+
+    // For admin routes, check if merchantId in URL matches cookie
+    if (location.pathname.includes("/admin/")) {
+      const adminMerchantId = location.pathname.split("/admin/")[1]?.split("/")[0];
+      return cookieMerchantId === adminMerchantId;
+    }
+
+    // For merchant routes, check if merchantId in URL matches cookie
+    if (location.pathname.includes("/merchant/")) {
+      return cookieMerchantId === routeMerchantId;
+    }
+
+    // For other routes (like root, login, register), don't show user button
+    return false;
+  };
+
   const navItems = [
     { label: "Home", url: "/" },
-    { label: "Collections", url: "/collections" },
-    { label: "About", url: "/about" },
+    { label: "Collections", url: "collections" },
+    { label: "About", url: "about" },
   ];
 
   const userDropdownItems = [
-    { label: "Profile", url: "/profile", isAction: false },
+    {
+      label: "Dashboard",
+      url: getMerchantDashboardUrl(),
+      isAction: false,
+    },
     { label: "Logout", action: handleLogout, isAction: true },
   ];
 
@@ -146,46 +182,48 @@ export default function Navbar() {
             </div>
 
             <div className="hidden sm:flex items-center gap-2 md:gap-4">
-              {/* User dropdown */}
-              <div
-                className="relative"
-                ref={userDropdownRef}
-                onMouseEnter={() => setUserDropdownOpen(true)}
-                onMouseLeave={() => setUserDropdownOpen(false)}
-              >
-                <button className="hover:text-yellow-600 transition relative p-2 group">
-                  <span className="absolute inset-0 rounded-full bg-gray-50 scale-0 transition-transform duration-200 group-hover:scale-100"></span>
-                  <User className="relative" size={20} />
-                </button>
+              {/* User dropdown - only show if conditions are met */}
+              {shouldShowUserButton() && (
+                <div
+                  className="relative"
+                  ref={userDropdownRef}
+                  onMouseEnter={() => setUserDropdownOpen(true)}
+                  onMouseLeave={() => setUserDropdownOpen(false)}
+                >
+                  <button className="hover:text-yellow-600 transition relative p-2 group">
+                    <span className="absolute inset-0 rounded-full bg-gray-50 scale-0 transition-transform duration-200 group-hover:scale-100"></span>
+                    <User className="relative" size={20} />
+                  </button>
 
-                {userDropdownOpen && (
-                  <div className="absolute right-0 top-full pt-1">
-                    <div className="bg-white rounded-md shadow-lg border border-gray-200 py-2 min-w-[120px] animate-fadeIn">
-                      {userDropdownItems.map((item, index) => (
-                        item.isAction ? (
-                          <button
-                            key={index}
-                            onClick={item.action}
-                            disabled={isLoggingOut}
-                            className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-yellow-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            {isLoggingOut ? 'Logging out...' : item.label}
-                          </button>
-                        ) : (
-                          <a
-                            key={index}
-                            href={item.url}
-                            className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-yellow-600 transition-colors"
-                            onClick={() => setUserDropdownOpen(false)}
-                          >
-                            {item.label}
-                          </a>
-                        )
-                      ))}
+                  {userDropdownOpen && (
+                    <div className="absolute right-0 top-full pt-1">
+                      <div className="bg-white rounded-md shadow-lg border border-gray-200 py-2 min-w-[120px] animate-fadeIn">
+                        {userDropdownItems.map((item, index) =>
+                          item.isAction ? (
+                            <button
+                              key={index}
+                              onClick={item.action}
+                              disabled={isLoggingOut}
+                              className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-yellow-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              {isLoggingOut ? "Logging out..." : item.label}
+                            </button>
+                          ) : (
+                            <a
+                              key={index}
+                              href={item.url}
+                              className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-yellow-600 transition-colors"
+                              onClick={() => setUserDropdownOpen(false)}
+                            >
+                              {item.label}
+                            </a>
+                          ),
+                        )}
+                      </div>
                     </div>
-                  </div>
-                )}
-              </div>
+                  )}
+                </div>
+              )}
 
               {/* Wishlist */}
               <a href="/wishlist" className="hover:text-yellow-600 transition relative p-2 group">
@@ -233,7 +271,9 @@ export default function Navbar() {
 
               <div className="sm:hidden flex justify-between py-2">
                 {[
-                  { icon: <User size={20} />, label: "Account", badge: null, url: "/account" },
+                  ...(shouldShowUserButton()
+                    ? [{ icon: <User size={20} />, label: "Account", badge: null, url: "/account" }]
+                    : []),
                   { icon: <Heart size={20} />, label: "Wishlist", badge: 3, url: "/wishlist" },
                   { icon: <ShoppingBag size={20} />, label: "Cart", badge: 2, url: "/cart" },
                 ].map((item, index) => (
@@ -251,16 +291,18 @@ export default function Navbar() {
                 ))}
               </div>
 
-              {/* Mobile logout button */}
-              <div className="pt-4 border-t border-gray-100">
-                <button
-                  onClick={handleLogout}
-                  disabled={isLoggingOut}
-                  className="w-full text-left px-2 py-2 text-sm uppercase font-medium text-red-600 hover:text-red-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {isLoggingOut ? 'Logging out...' : 'Logout'}
-                </button>
-              </div>
+              {/* Mobile logout button - only show if user button should be visible */}
+              {shouldShowUserButton() && (
+                <div className="pt-4 border-t border-gray-100">
+                  <button
+                    onClick={handleLogout}
+                    disabled={isLoggingOut}
+                    className="w-full text-left px-2 py-2 text-sm uppercase font-medium text-red-600 hover:text-red-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isLoggingOut ? "Logging out..." : "Logout"}
+                  </button>
+                </div>
+              )}
             </nav>
           </div>
         )}

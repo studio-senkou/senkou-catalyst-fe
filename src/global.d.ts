@@ -90,6 +90,7 @@ declare global {
   }
 
   interface LoginResponse {
+    merchantId: LoginResponse;
     message: string;
     data: {
       access_token: string;        
@@ -97,6 +98,7 @@ declare global {
       refresh_token: string;
       refresh_token_expiry: string;
       user: User;
+      merchantId: string;
     };
   }
 
