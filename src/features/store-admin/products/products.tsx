@@ -55,7 +55,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  Plus,
   Search,
   Edit,
   Trash2,
@@ -83,20 +82,10 @@ interface Product {
   description: string;
 }
 
-interface NewProduct {
-  name: string;
-  category: string;
-  price: number;
-  stock: number;
-  image: string;
-  description: string;
-}
-
 // Column helper for type safety
 const columnHelper = createColumnHelper<Product>();
 
 export default function Products(): React.ReactElement {
-  const [isAddModalOpen, setIsAddModalOpen] = useState<boolean>(false);
   const [globalFilter, setGlobalFilter] = useState<string>("");
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [sorting, setSorting] = useState<SortingState>([]);
@@ -166,16 +155,6 @@ export default function Products(): React.ReactElement {
       description: "Noise-canceling headphones",
     },
   ]);
-
-  const handleAddProduct = (newProduct: NewProduct): void => {
-    const product: Product = {
-      id: (products.length + 1).toString(),
-      ...newProduct,
-      status: "Active",
-    };
-    setProducts((prevProducts) => [...prevProducts, product]);
-    setIsAddModalOpen(false);
-  };
 
   const formatPrice = (price: number): string => {
     return new Intl.NumberFormat("id-ID", {
@@ -467,10 +446,6 @@ export default function Products(): React.ReactElement {
                   Delete Selected ({Object.keys(rowSelection).length})
                 </Button>
               )}
-              <Button onClick={() => setIsAddModalOpen(true)}>
-                <Plus className="mr-2 h-4 w-4" />
-                Add Product
-              </Button>
             </div>
           </div>
 

@@ -11,6 +11,7 @@ export default function Popular({ getRandomImage }: CategoryProps) {
   const transformedProducts: Product[] = popularProducts.slice(4, 8).map((product) => ({
     id: product.id,
     name: product.name,
+    category: "Fashion", // Add default category
     price: product.price,
     rating: product.rating,
     isNew: product.discount !== undefined, // Using discount as a flag for special treatment
@@ -39,6 +40,7 @@ export default function Popular({ getRandomImage }: CategoryProps) {
               key={product.id}
               id={product.id}
               name={product.name}
+              category={product.category}
               price={product.price}
               rating={product.rating}
               isNew={product.isNew}

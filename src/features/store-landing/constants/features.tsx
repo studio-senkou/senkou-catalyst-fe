@@ -1,5 +1,5 @@
 import { Heart, Clock, Shield, Award } from "lucide-react";
-import { JSX } from "react";
+import type { JSX } from "react";
 
 interface Feature {
   icon: JSX.Element;

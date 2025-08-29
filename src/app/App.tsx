@@ -6,7 +6,7 @@ import Collections from "../features/store-landing/collections";
 import ProductDetails from "../features/store-landing/details";
 import Whislist from "../features/store-landing/whislist";
 import About from "../features/store-landing/about";
-import Login from "../features/login/login";
+import Login from "../features/login/Login";
 import Register from "../features/register/Register";
 import Dashboard from "../features/store-admin/dashboard/dashboard";
 import Products from "../features/store-admin/products/products";
