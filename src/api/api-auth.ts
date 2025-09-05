@@ -6,7 +6,7 @@ export const apiAuth = {
   async login(credentials: LoginRequest): Promise<{
     loginResponse: LoginResponse;
     userResponse: GetUserDetailResponse;
-    merchantId: string;
+    merchantId?: string; 
   }> {
     try {
       const loginResponse = await api.post<LoginResponse>('/auth/login', credentials);
@@ -19,23 +19,36 @@ export const apiAuth = {
       const userResponse = await apiUser.getCurrentUser();
       
       const user = userResponse.data.user;
-      let merchantId = '';
+      let merchantId: string | undefined;
       
-      if (user.merchants && user.merchants.length > 0) {
-        merchantId = user.merchants[0].id;
-        
-        tokenManager.saveMerchantId(merchantId);
-        
+      if (user.role === 'admin') {
         tokenManager.saveUserData({
           id: user.id,
           name: user.name,
           email: user.email,
           phone: user.phone,
           role: user.role,
-          merchants: user.merchants
+          merchants: user.merchants || []
         });
+        
+        merchantId = undefined;
       } else {
-        throw new Error('User has no associated merchants');
+        if (user.merchants && user.merchants.length > 0) {
+          merchantId = user.merchants[0].id;
+          
+          tokenManager.saveMerchantId(merchantId);
+          
+          tokenManager.saveUserData({
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            phone: user.phone,
+            role: user.role,
+            merchants: user.merchants
+          });
+        } else {
+          throw new Error('User has no associated merchants');
+        }
       }
 
       return {
@@ -98,13 +111,24 @@ export const apiAuth = {
     return tokenManager.getAccessToken();
   },
 
-  // Get current merchant ID
+  // Get current merchant ID (will return null for admin users)
   getCurrentMerchantId(): string | null {
+    const userData = tokenManager.getUserData();
+    // Return null for admin users since they don't need merchant ID
+    if (userData?.role === 'admin') {
+      return null;
+    }
     return tokenManager.getMerchantId();
   },
 
   // Get current user data
   getCurrentUserData(): any {
     return tokenManager.getUserData();
+  },
+
+  // Check if current user is admin
+  isCurrentUserAdmin(): boolean {
+    const userData = tokenManager.getUserData();
+    return userData?.role === 'admin';
   },
 };

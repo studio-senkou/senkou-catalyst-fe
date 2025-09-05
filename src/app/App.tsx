@@ -14,14 +14,47 @@ import Categories from "../features/store-admin/categories/categories";
 import Profile from "../features/store-admin/profile/profile";
 import NotFound from "../features/not-found";
 
-// Simplified Protected Route Component for Admin Routes - Single Condition Check
-const ProtectedAdminRoute = ({ children }: { children: React.ReactNode }) => {
+// Protected Route Component for Merchant Admin Routes (with merchantId)
+const ProtectedMerchantAdminRoute = ({ children }: { children: React.ReactNode }) => {
   const { merchantId } = useParams<{ merchantId: string }>();
   const isAuthenticated = apiAuth.isAuthenticated();
   const currentMerchantId = apiAuth.getCurrentMerchantId();
+  const userData = apiAuth.getCurrentUserData();
 
-  // Single comprehensive condition check
-  if (!isAuthenticated || !merchantId || currentMerchantId !== merchantId) {
+  // Check authentication
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (userData?.role === "admin") {
+    return <Navigate to="/admin/dashboard" replace />;
+  }
+
+  if (!merchantId || currentMerchantId !== merchantId) {
+    return <Navigate to="/login" replace />;
+  }
+
+  return <>{children}</>;
+};
+
+// Protected Route Component for Super Admin Routes (without merchantId)
+const ProtectedSuperAdminRoute = ({ children }: { children: React.ReactNode }) => {
+  const isAuthenticated = apiAuth.isAuthenticated();
+  const userData = apiAuth.getCurrentUserData();
+
+  // Check authentication
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
+  // Check if user is admin
+  if (userData?.role !== "admin") {
+    // If user is not admin but has merchantId, redirect to their merchant dashboard
+    const merchantId = apiAuth.getCurrentMerchantId();
+    if (merchantId) {
+      return <Navigate to={`/admin/${merchantId}/dashboard`} replace />;
+    }
+    // Otherwise redirect to login
     return <Navigate to="/login" replace />;
   }
 
@@ -43,37 +76,71 @@ export default function App() {
       <Route path="/merchant/:id/wishlist" element={<Whislist />} />
       <Route path="/merchant/:id/about" element={<About />} />
 
-      {/* Protected Admin Routes */}
+      {/* Protected Super Admin Routes (for role: admin) */}
+      <Route
+        path="/admin/dashboard"
+        element={
+          <ProtectedSuperAdminRoute>
+            <Dashboard />
+          </ProtectedSuperAdminRoute>
+        }
+      />
+      <Route
+        path="/admin/products"
+        element={
+          <ProtectedSuperAdminRoute>
+            <Products />
+          </ProtectedSuperAdminRoute>
+        }
+      />
+      <Route
+        path="/admin/categories"
+        element={
+          <ProtectedSuperAdminRoute>
+            <Categories />
+          </ProtectedSuperAdminRoute>
+        }
+      />
+      <Route
+        path="/admin/profile"
+        element={
+          <ProtectedSuperAdminRoute>
+            <Profile />
+          </ProtectedSuperAdminRoute>
+        }
+      />
+
+      {/* Protected Merchant Admin Routes (for non-admin users with merchantId) */}
       <Route
         path="/admin/:merchantId/dashboard"
         element={
-          <ProtectedAdminRoute>
+          <ProtectedMerchantAdminRoute>
             <Dashboard />
-          </ProtectedAdminRoute>
+          </ProtectedMerchantAdminRoute>
         }
       />
       <Route
         path="/admin/:merchantId/products"
         element={
-          <ProtectedAdminRoute>
+          <ProtectedMerchantAdminRoute>
             <Products />
-          </ProtectedAdminRoute>
+          </ProtectedMerchantAdminRoute>
         }
       />
       <Route
         path="/admin/:merchantId/categories"
         element={
-          <ProtectedAdminRoute>
+          <ProtectedMerchantAdminRoute>
             <Categories />
-          </ProtectedAdminRoute>
+          </ProtectedMerchantAdminRoute>
         }
       />
       <Route
         path="/admin/:merchantId/profile"
         element={
-          <ProtectedAdminRoute>
+          <ProtectedMerchantAdminRoute>
             <Profile />
-          </ProtectedAdminRoute>
+          </ProtectedMerchantAdminRoute>
         }
       />
 

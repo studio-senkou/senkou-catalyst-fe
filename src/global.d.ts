@@ -3,22 +3,35 @@ export {};
 
 declare global {
   // Updated Product interface for admin panel
+  // interface Product {
+  //   id: string;
+  //   name: string;
+  //   category: string;
+  //   price: number | string; // Changed to number for admin calculations
+  //   stock?: number;
+  //   status?: string;
+  //   image: string;
+  //   description?: string;
+  //   brand?: string;
+  //   // Keep existing fields for compatibility
+  //   rating?: string;
+  //   isNew?: boolean;
+  //   bgColor?: string;
+  //   originalPrice?: string;
+  //   discount?: string;
+  // }
+
   interface Product {
     id: string;
-    name: string;
-    category: string;
-    price: number | string; // Changed to number for admin calculations
-    stock?: number;
-    status?: string;
-    image: string;
-    description?: string;
-    brand?: string;
-    // Keep existing fields for compatibility
-    rating?: string;
-    isNew?: boolean;
-    bgColor?: string;
-    originalPrice?: string;
-    discount?: string;
+    merchant_id: string;
+    category_id: number;
+    title: string;
+    price: string;
+    description: string;
+    affiliate_url: string;
+    photos: string[];
+    created_at?: string;
+    updated_at?: string;
   }
 
   // New interface for adding products
@@ -72,25 +85,32 @@ declare global {
     refreshToken: string;
   }
 
-  interface User {
-    id: number;
+  interface UpdateUserRequest {
     name: string;
     email: string;
     phone: string;
-    role?: string;
-    created_at?: string;
-    updated_at?: string;
-    merchants?: Merchant[];
   }
 
   interface Merchant {
     id: string;
     name: string;
     owner_id: number;
+    created_at: string;
+    updated_at: string;
+  }
+
+  interface User {
+    id: number;
+    name: string;
+    email: string;
+    phone: string;
+    role: string;
+    created_at: string;
+    updated_at: string;
+    merchants?: Merchant[];
   }
 
   interface LoginResponse {
-    merchantId: LoginResponse;
     message: string;
     data: {
       access_token: string;        
@@ -117,6 +137,13 @@ declare global {
   }
 
   interface GetUserDetailResponse {
+    message: string;
+    data: {
+      user: User;
+    };
+  }
+
+  interface UpdateUserResponse {
     message: string;
     data: {
       user: User;

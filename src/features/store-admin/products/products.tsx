@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   createColumnHelper,
   flexRender,
@@ -37,7 +37,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   DropdownMenu,
@@ -55,6 +54,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { toast } from "sonner";
+import {
   Search,
   Edit,
   Trash2,
@@ -67,20 +74,14 @@ import {
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
+  Plus,
+  Loader2,
 } from "lucide-react";
-// import AddProductModal from "./add-product";
-
-// Type definitions with string ID
-interface Product {
-  id: string;
-  name: string;
-  category: string;
-  price: number;
-  stock: number;
-  status: "Active" | "Inactive";
-  image: string;
-  description: string;
-}
+import AddProductModal from "./add-product";
+import EditProductModal from "./edit-product";
+import { apiProduct, type Product } from "./api/api-product";
+import { apiCategory, type Category } from "../categories/api/api-category";
+import { apiAuth } from "@/api/api-auth";
 
 // Column helper for type safety
 const columnHelper = createColumnHelper<Product>();
@@ -92,106 +93,163 @@ export default function Products(): React.ReactElement {
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
 
-  // Sample products data with string IDs
-  const [products, setProducts] = useState<Product[]>([
-    {
-      id: "1",
-      name: "iPhone 15 Pro",
-      category: "Electronics",
-      price: 15999000,
-      stock: 25,
-      status: "Active",
-      image: "https://via.placeholder.com/50",
-      description: "Latest iPhone with advanced features",
-    },
-    {
-      id: "2",
-      name: "MacBook Air M3",
-      category: "Electronics",
-      price: 18999000,
-      status: "Active",
-      stock: 12,
-      image: "https://via.placeholder.com/50",
-      description: "Powerful laptop with M3 chip",
-    },
-    {
-      id: "3",
-      name: "Samsung Galaxy S24",
-      category: "Electronics",
-      price: 12999000,
-      stock: 0,
-      status: "Inactive",
-      image: "https://via.placeholder.com/50",
-      description: "Android flagship smartphone",
-    },
-    {
-      id: "4",
-      name: "iPad Pro",
-      category: "Electronics",
-      price: 16999000,
-      stock: 8,
-      status: "Active",
-      image: "https://via.placeholder.com/50",
-      description: "Professional tablet for creative work",
-    },
-    {
-      id: "5",
-      name: "Dell XPS 13",
-      category: "Electronics",
-      price: 22000000,
-      stock: 15,
-      status: "Active",
-      image: "https://via.placeholder.com/50",
-      description: "Premium ultrabook for professionals",
-    },
-    {
-      id: "6",
-      name: "Sony WH-1000XM5",
-      category: "Audio",
-      price: 4500000,
-      stock: 30,
-      status: "Active",
-      image: "https://via.placeholder.com/50",
-      description: "Noise-canceling headphones",
-    },
-  ]);
+  // Products data and loading states
+  const [products, setProducts] = useState<Product[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isDeleting, setIsDeleting] = useState<string>("");
 
-  const formatPrice = (price: number): string => {
-    return new Intl.NumberFormat("id-ID", {
-      style: "currency",
-      currency: "IDR",
-    }).format(price);
-  };
+  // Categories data and loading state
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [isLoadingCategories, setIsLoadingCategories] = useState<boolean>(false);
 
-  const getStockColor = (stock: number): string => {
-    if (stock === 0) return "text-red-600";
-    if (stock < 10) return "text-orange-600";
-    return "text-green-600";
-  };
+  // Modal states
+  const [isAddModalOpen, setIsAddModalOpen] = useState<boolean>(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState<boolean>(false);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [isViewModalOpen, setIsViewModalOpen] = useState<boolean>(false);
+  const [viewingProduct, setViewingProduct] = useState<Product | null>(null);
 
-  const handleEditProduct = (id: string): void => {
-    console.log("Edit product with id:", id);
-  };
+  // Get merchantID from auth
+  const merchantID = apiAuth.getCurrentMerchantId() || "";
 
-  const handleDeleteProduct = (id: string): void => {
-    if (window.confirm("Are you sure you want to delete this product?")) {
-      setProducts((prevProducts) => prevProducts.filter((product: Product) => product.id !== id));
+  // Load data on component mount
+  useEffect(() => {
+    if (merchantID) {
+      loadProducts();
+      loadCategories();
+    } else {
+      toast.error("Merchant ID not found. Please login again.");
+      setIsLoading(false);
+    }
+  }, [merchantID]);
+
+  const loadProducts = async (): Promise<void> => {
+    if (!merchantID) return;
+
+    try {
+      setIsLoading(true);
+      const response = await apiProduct.getProductsByMerchant(merchantID);
+      setProducts(response.data.products);
+    } catch (error: any) {
+      toast.error(error.message || "Failed to load products");
+      setProducts([]);
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const handleViewProduct = (id: string): void => {
-    console.log("View product with id:", id);
+  const loadCategories = async (): Promise<void> => {
+    if (!merchantID) return;
+
+    try {
+      setIsLoadingCategories(true);
+      const response = await apiCategory.getCategories(merchantID);
+      setCategories(response.data.categories);
+    } catch (error: any) {
+      console.error("Failed to load categories:", error);
+      setCategories([]);
+    } finally {
+      setIsLoadingCategories(false);
+    }
   };
 
-  const handleDeleteSelected = (): void => {
-    const selectedIds = Object.keys(rowSelection);
+  const handleCategoriesUpdate = async (): Promise<void> => {
+    await loadCategories();
+  };
+
+  // Helper function to get category name by ID
+  const getCategoryName = (categoryId: number | null): string => {
+    if (!categoryId) return "No Category";
+    const category = categories.find((cat) => cat.id === categoryId);
+    return category ? category.name : `Category ${categoryId}`;
+  };
+
+  const formatPrice = (price: string): string => {
+    const numericPrice = parseFloat(price);
+    if (isNaN(numericPrice)) return "Invalid price";
+
+    return new Intl.NumberFormat("id-ID", {
+      style: "currency",
+      currency: "IDR",
+      minimumFractionDigits: 0,
+    }).format(numericPrice);
+  };
+
+  const handleAddProduct = async (): Promise<void> => {
+    await loadProducts();
+  };
+
+  const handleEditProduct = (product: Product): void => {
+    setEditingProduct(product);
+    setIsEditModalOpen(true);
+  };
+
+  const handleUpdateProduct = async (): Promise<void> => {
+    setIsEditModalOpen(false);
+    setEditingProduct(null);
+    await loadProducts();
+  };
+
+  const handleDeleteProduct = async (product: Product): Promise<void> => {
+    if (!merchantID) {
+      toast.error("Merchant ID not found");
+      return;
+    }
+
+    if (window.confirm(`Are you sure you want to delete "${product.title}"?`)) {
+      try {
+        setIsDeleting(product.id);
+        await apiProduct.deleteProduct(merchantID, product.id);
+        toast.success("Product deleted successfully");
+        await loadProducts();
+      } catch (error: any) {
+        toast.error(error.message || "Failed to delete product");
+      } finally {
+        setIsDeleting("");
+      }
+    }
+  };
+
+  const handleViewProduct = (product: Product): void => {
+    setViewingProduct(product);
+    setIsViewModalOpen(true);
+  };
+
+  const handleDeleteSelected = async (): Promise<void> => {
+    if (!merchantID) {
+      toast.error("Merchant ID not found");
+      return;
+    }
+
+    const selectedProducts = Object.keys(rowSelection)
+      .map((id) => products.find((p) => p.id === id))
+      .filter(Boolean) as Product[];
+
+    if (selectedProducts.length === 0) return;
+
     if (
-      window.confirm(`Are you sure you want to delete ${selectedIds.length} selected products?`)
+      window.confirm(
+        `Are you sure you want to delete ${selectedProducts.length} selected products?`,
+      )
     ) {
-      setProducts((prevProducts) =>
-        prevProducts.filter((product: Product) => !selectedIds.includes(product.id)),
-      );
-      setRowSelection({});
+      try {
+        setIsLoading(true);
+
+        // Delete all selected products
+        const deletePromises = selectedProducts.map((product) =>
+          apiProduct.deleteProduct(merchantID, product.id),
+        );
+
+        await Promise.all(deletePromises);
+
+        toast.success(`${selectedProducts.length} products deleted successfully`);
+        setRowSelection({});
+        await loadProducts();
+      } catch (error: any) {
+        toast.error(error.message || "Failed to delete selected products");
+      } finally {
+        setIsLoading(false);
+      }
     }
   };
 
@@ -221,22 +279,31 @@ export default function Products(): React.ReactElement {
       }),
 
       // Image column
-      columnHelper.accessor("image", {
+      columnHelper.accessor("photos", {
         header: "Image",
-        cell: ({ row, getValue }) => (
-          <img
-            src={getValue()}
-            alt={row.original.name}
-            className="h-10 w-10 rounded-md object-cover"
-          />
-        ),
+        cell: ({ getValue }) => {
+          const photos = getValue();
+          const firstPhoto = photos && photos.length > 0 ? photos[0] : null;
+
+          return firstPhoto ? (
+            <img
+              src={`${import.meta.env.VITE_API_URL}/files/${firstPhoto}`}
+              alt="Product"
+              className="h-10 w-10 rounded-md object-cover"
+            />
+          ) : (
+            <div className="h-10 w-10 rounded-md bg-gray-200 flex items-center justify-center">
+              <span className="text-xs text-gray-500">No img</span>
+            </div>
+          );
+        },
         enableSorting: false,
         enableColumnFilter: false,
         size: 80,
       }),
 
-      // Name column
-      columnHelper.accessor("name", {
+      // Title column
+      columnHelper.accessor("title", {
         header: ({ column }) => {
           return (
             <Button
@@ -244,7 +311,7 @@ export default function Products(): React.ReactElement {
               onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
               className="h-auto p-0 font-medium"
             >
-              Name
+              Title
               {column.getIsSorted() === "asc" ? (
                 <ChevronUp className="ml-2 h-4 w-4" />
               ) : column.getIsSorted() === "desc" ? (
@@ -259,8 +326,8 @@ export default function Products(): React.ReactElement {
         size: 200,
       }),
 
-      // Category column
-      columnHelper.accessor("category", {
+      // Category column - Updated to show category name
+      columnHelper.accessor("category_id", {
         header: ({ column }) => {
           return (
             <Button
@@ -279,7 +346,11 @@ export default function Products(): React.ReactElement {
             </Button>
           );
         },
-        filterFn: "includesString",
+        cell: ({ getValue }) => {
+          const categoryId = getValue();
+          return getCategoryName(categoryId);
+        },
+        filterFn: "equals",
         size: 120,
       }),
 
@@ -307,38 +378,21 @@ export default function Products(): React.ReactElement {
         size: 150,
       }),
 
-      // Stock column
-      columnHelper.accessor("stock", {
-        header: ({ column }) => {
-          return (
-            <Button
-              variant="ghost"
-              onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-              className="h-auto p-0 font-medium"
-            >
-              Stock
-              {column.getIsSorted() === "asc" ? (
-                <ChevronUp className="ml-2 h-4 w-4" />
-              ) : column.getIsSorted() === "desc" ? (
-                <ChevronDown className="ml-2 h-4 w-4" />
-              ) : (
-                <ArrowUpDown className="ml-2 h-4 w-4" />
-              )}
-            </Button>
+      // Description column
+      columnHelper.accessor("description", {
+        header: "Description",
+        cell: ({ getValue }) => {
+          const description = getValue();
+          return description ? (
+            <div className="max-w-[200px] truncate" title={description}>
+              {description}
+            </div>
+          ) : (
+            <span className="text-gray-500">No description</span>
           );
         },
-        cell: ({ getValue }) => <span className={getStockColor(getValue())}>{getValue()}</span>,
-        size: 100,
-      }),
-
-      // Status column
-      columnHelper.accessor("status", {
-        header: "Status",
-        cell: ({ getValue }) => (
-          <Badge variant={getValue() === "Active" ? "default" : "secondary"}>{getValue()}</Badge>
-        ),
-        filterFn: "equals",
-        size: 100,
+        enableSorting: false,
+        size: 200,
       }),
 
       // Actions column
@@ -347,19 +401,35 @@ export default function Products(): React.ReactElement {
         header: "Actions",
         cell: ({ row }) => (
           <div className="flex items-center gap-2 justify-end">
-            <Button variant="ghost" size="sm" onClick={() => handleViewProduct(row.original.id)}>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => handleViewProduct(row.original)}
+              title="View product"
+            >
               <Eye className="h-4 w-4" />
             </Button>
-            <Button variant="ghost" size="sm" onClick={() => handleEditProduct(row.original.id)}>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => handleEditProduct(row.original)}
+              title="Edit product"
+            >
               <Edit className="h-4 w-4" />
             </Button>
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => handleDeleteProduct(row.original.id)}
+              onClick={() => handleDeleteProduct(row.original)}
               className="text-red-600 hover:text-red-700"
+              disabled={isDeleting === row.original.id}
+              title="Delete product"
             >
-              <Trash2 className="h-4 w-4" />
+              {isDeleting === row.original.id ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Trash2 className="h-4 w-4" />
+              )}
             </Button>
           </div>
         ),
@@ -368,7 +438,7 @@ export default function Products(): React.ReactElement {
         size: 150,
       }),
     ],
-    [rowSelection],
+    [isDeleting, categories], // Add categories as dependency
   );
 
   // Create table instance
@@ -397,13 +467,15 @@ export default function Products(): React.ReactElement {
         pageSize: 10,
       },
     },
-    getRowId: (row) => row.id, // Explicitly set row ID to use string ID
+    getRowId: (row) => row.id,
   });
 
-  // Get unique categories for filter
-  const categories = useMemo(() => {
-    const uniqueCategories = Array.from(new Set(products.map((p) => p.category)));
-    return uniqueCategories;
+  // Get unique category IDs for filter
+  const availableCategoryIds = useMemo(() => {
+    const uniqueCategoryIds = Array.from(
+      new Set(products.map((p) => p.category_id).filter(Boolean)),
+    );
+    return uniqueCategoryIds;
   }, [products]);
 
   return (
@@ -441,11 +513,20 @@ export default function Products(): React.ReactElement {
             </div>
             <div className="flex items-center gap-2">
               {Object.keys(rowSelection).length > 0 && (
-                <Button variant="destructive" onClick={handleDeleteSelected} size="sm">
+                <Button
+                  variant="destructive"
+                  onClick={handleDeleteSelected}
+                  size="sm"
+                  disabled={isLoading}
+                >
                   <Trash2 className="mr-2 h-4 w-4" />
                   Delete Selected ({Object.keys(rowSelection).length})
                 </Button>
               )}
+              <Button onClick={() => setIsAddModalOpen(true)}>
+                <Plus className="mr-2 h-4 w-4" />
+                Add Product
+              </Button>
             </div>
           </div>
 
@@ -462,41 +543,28 @@ export default function Products(): React.ReactElement {
             </div>
 
             {/* Category Filter */}
-            <Select
-              value={(table.getColumn("category")?.getFilterValue() as string) ?? ""}
-              onValueChange={(value) =>
-                table.getColumn("category")?.setFilterValue(value === "all" ? "" : value)
-              }
-            >
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Filter by category" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Categories</SelectItem>
-                {categories.map((category) => (
-                  <SelectItem key={category} value={category}>
-                    {category}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            {/* Status Filter */}
-            <Select
-              value={(table.getColumn("status")?.getFilterValue() as string) ?? ""}
-              onValueChange={(value) =>
-                table.getColumn("status")?.setFilterValue(value === "all" ? "" : value)
-              }
-            >
-              <SelectTrigger className="w-[150px]">
-                <SelectValue placeholder="Filter by status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="Active">Active</SelectItem>
-                <SelectItem value="Inactive">Inactive</SelectItem>
-              </SelectContent>
-            </Select>
+            {availableCategoryIds.length > 0 && (
+              <Select
+                value={(table.getColumn("category_id")?.getFilterValue() as string) ?? ""}
+                onValueChange={(value) =>
+                  table
+                    .getColumn("category_id")
+                    ?.setFilterValue(value === "all" ? "" : Number(value))
+                }
+              >
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Filter by category" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Categories</SelectItem>
+                  {availableCategoryIds.map((categoryId) => (
+                    <SelectItem key={categoryId} value={categoryId.toString()}>
+                      {getCategoryName(categoryId)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
 
             {/* Column Visibility */}
             <DropdownMenu>
@@ -550,7 +618,16 @@ export default function Products(): React.ReactElement {
                 ))}
               </TableHeader>
               <TableBody>
-                {table.getRowModel().rows?.length ? (
+                {isLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={columns.length} className="h-24 text-center">
+                      <div className="flex items-center justify-center">
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Loading products...
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ) : table.getRowModel().rows?.length ? (
                   table.getRowModel().rows.map((row) => (
                     <TableRow key={row.id} data-state={row.getIsSelected() && "selected"}>
                       {row.getVisibleCells().map((cell) => (
@@ -568,7 +645,7 @@ export default function Products(): React.ReactElement {
                 ) : (
                   <TableRow>
                     <TableCell colSpan={columns.length} className="h-24 text-center">
-                      No results.
+                      No products found. Click "Add Product" to create your first product.
                     </TableCell>
                   </TableRow>
                 )}
@@ -648,12 +725,79 @@ export default function Products(): React.ReactElement {
           </div>
         </div>
 
-        {/* Add Product Modal */}
-        {/* <AddProductModal
+        {/* Modals */}
+        <AddProductModal
           open={isAddModalOpen}
           onOpenChange={setIsAddModalOpen}
           onSubmit={handleAddProduct}
-        /> */}
+          categories={categories}
+          isLoadingCategories={isLoadingCategories}
+          onCategoriesUpdate={handleCategoriesUpdate}
+        />
+
+        {editingProduct && (
+          <EditProductModal
+            open={isEditModalOpen}
+            onOpenChange={setIsEditModalOpen}
+            product={editingProduct}
+            onSubmit={handleUpdateProduct}
+            categories={categories}
+            isLoadingCategories={isLoadingCategories}
+            onCategoriesUpdate={handleCategoriesUpdate}
+          />
+        )}
+
+        {viewingProduct && (
+          <Dialog open={isViewModalOpen} onOpenChange={setIsViewModalOpen}>
+            <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                <DialogTitle>{viewingProduct.title}</DialogTitle>
+                <DialogDescription>Product Details</DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4">
+                {viewingProduct.photos && viewingProduct.photos.length > 0 && (
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    {viewingProduct.photos.map((photo, index) => (
+                      <img
+                        key={index}
+                        src={`${import.meta.env.VITE_API_URL}/files/${photo}`}
+                        alt={`${viewingProduct.title} ${index + 1}`}
+                        className="w-full h-32 object-cover rounded-md border"
+                      />
+                    ))}
+                  </div>
+                )}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <h4 className="font-semibold">Price</h4>
+                    <p>{formatPrice(viewingProduct.price)}</p>
+                  </div>
+                  <div>
+                    <h4 className="font-semibold">Category</h4>
+                    <p>{getCategoryName(viewingProduct.category_id)}</p>
+                  </div>
+                </div>
+                {viewingProduct.description && (
+                  <div>
+                    <h4 className="font-semibold">Description</h4>
+                    <p>{viewingProduct.description}</p>
+                  </div>
+                )}
+                <div>
+                  <h4 className="font-semibold">Affiliate URL</h4>
+                  <a
+                    href={viewingProduct.affiliate_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 hover:underline break-all"
+                  >
+                    {viewingProduct.affiliate_url}
+                  </a>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+        )}
       </SidebarInset>
     </SidebarProvider>
   );

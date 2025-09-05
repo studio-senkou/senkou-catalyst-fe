@@ -1,374 +1,389 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { User, Lock, Bell, Globe, Shield, Save } from "lucide-react";
+import { User, Building2, Calendar, Edit, Save, X } from "lucide-react";
+import { apiUser } from "@/api/api-user";
+import { apiAuth } from "@/api/api-auth";
+import { tokenManager } from "@/lib/axios";
 
-interface ProfileData {
-  firstName: string;
-  lastName: string;
-  email: string;
-  phone: string;
-  bio: string;
-  company: string;
-  position: string;
-  website: string;
-  location: string;
-  timezone: string;
-}
-
-interface NotificationSettings {
-  emailNotifications: boolean;
-  pushNotifications: boolean;
-  marketingEmails: boolean;
-  securityAlerts: boolean;
-}
-
-export function ProfileContent(){
-  const [profile, setProfile] = useState<ProfileData>({
-    firstName: "John",
-    lastName: "Doe",
-    email: "john.doe@example.com",
-    phone: "+62 812 3456 7890",
-    bio: "Senior Developer with 5+ years of experience in web development",
-    company: "Tech Corp",
-    position: "Senior Developer",
-    website: "https://johndoe.dev",
-    location: "Jakarta, Indonesia",
-    timezone: "Asia/Jakarta",
+export function ProfileContent() {
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState({
+    name: "",
+    email: "",
+    phone: "",
   });
 
-  const [notifications, setNotifications] = useState<NotificationSettings>({
-    emailNotifications: true,
-    pushNotifications: false,
-    marketingEmails: true,
-    securityAlerts: true,
-  });
+  useEffect(() => {
+    fetchUserData();
+  }, []);
 
-  const handleProfileChange = (field: keyof ProfileData, value: string): void => {
-    setProfile((prev) => ({ ...prev, [field]: value }));
+  const fetchUserData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      // Try to get user data from cache first
+      const cachedUserData = apiAuth.getCurrentUserData();
+      if (cachedUserData) {
+        setUser(cachedUserData);
+        setEditForm({
+          name: cachedUserData.name,
+          email: cachedUserData.email,
+          phone: cachedUserData.phone,
+        });
+      }
+
+      // Then fetch fresh data from API
+      const response = await apiUser.getCurrentUser();
+      const userData = response.data.user;
+
+      setUser(userData);
+      setEditForm({
+        name: userData.name,
+        email: userData.email,
+        phone: userData.phone,
+      });
+
+      // Update cached data via tokenManager
+      tokenManager.saveUserData({
+        id: userData.id,
+        name: userData.name,
+        email: userData.email,
+        phone: userData.phone,
+        role: userData.role,
+        created_at: userData.created_at,
+        updated_at: userData.updated_at,
+        merchants: userData.merchants || [],
+      });
+    } catch (err: any) {
+      setError(err.message || "Failed to fetch user data");
+      console.error("Failed to fetch user data:", err);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleNotificationChange = (field: keyof NotificationSettings, value: boolean): void => {
-    setNotifications((prev) => ({ ...prev, [field]: value }));
+  const handleEdit = () => {
+    setEditing(true);
+    setError(null);
   };
+
+  const handleCancel = () => {
+    setEditing(false);
+    setError(null);
+    if (user) {
+      setEditForm({
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+      });
+    }
+  };
+
+  const handleSave = async () => {
+    try {
+      setSaving(true);
+      setError(null);
+
+      // Validate form data
+      if (!editForm.name.trim()) {
+        throw new Error("Name is required");
+      }
+      if (!editForm.email.trim()) {
+        throw new Error("Email is required");
+      }
+      if (!editForm.phone.trim()) {
+        throw new Error("Phone is required");
+      }
+
+      // Call API to update user
+      const response = await apiUser.updateCurrentUser({
+        name: editForm.name.trim(),
+        email: editForm.email.trim(),
+        phone: editForm.phone.trim(),
+      });
+
+      // Update local state and cache
+      const updatedUser = response.data.user;
+      setUser(updatedUser);
+
+      // Update cached data via tokenManager
+      tokenManager.saveUserData({
+        id: updatedUser.id,
+        name: updatedUser.name,
+        email: updatedUser.email,
+        phone: updatedUser.phone,
+        role: updatedUser.role,
+        created_at: updatedUser.created_at,
+        updated_at: updatedUser.updated_at,
+        merchants: updatedUser.merchants || [],
+      });
+
+      setEditing(false);
+    } catch (err: any) {
+      setError(err.message || "Failed to update profile");
+      console.error("Failed to update user:", err);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const formatDate = (dateString: string) => {
+    try {
+      return new Date(dateString).toLocaleString("id-ID", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    } catch {
+      return dateString; // Fallback to original string if parsing fails
+    }
+  };
+
+  if (loading) {
+    return (
+      <Card>
+        <CardContent className="p-6">
+          <div className="animate-pulse space-y-4">
+            <div className="h-8 bg-gray-200 rounded w-1/4"></div>
+            <div className="space-y-2">
+              <div className="h-4 bg-gray-200 rounded"></div>
+              <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (!user) {
+    return (
+      <Card>
+        <CardContent className="p-6">
+          <div className="text-center space-y-2">
+            <p className="text-gray-500">No user data available</p>
+            {error && <p className="text-red-500 text-sm">{error}</p>}
+            <Button onClick={fetchUserData} variant="outline" size="sm">
+              Retry
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
-    <div className="space-y-6">
-      <Tabs defaultValue="personal" className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="personal" className="flex items-center gap-2">
-            <User className="h-4 w-4" />
-            Personal
-          </TabsTrigger>
-          <TabsTrigger value="security" className="flex items-center gap-2">
-            <Lock className="h-4 w-4" />
-            Security
-          </TabsTrigger>
-          <TabsTrigger value="notifications" className="flex items-center gap-2">
-            <Bell className="h-4 w-4" />
-            Notifications
-          </TabsTrigger>
-          <TabsTrigger value="preferences" className="flex items-center gap-2">
-            <Globe className="h-4 w-4" />
-            Preferences
-          </TabsTrigger>
-        </TabsList>
+    <Tabs defaultValue="personal" className="w-full">
+      <TabsList className="grid w-full grid-cols-2">
+        <TabsTrigger value="personal" className="flex items-center gap-2">
+          <User className="w-4 h-4" />
+          Personal Info
+        </TabsTrigger>
+        <TabsTrigger value="merchants" className="flex items-center gap-2">
+          <Building2 className="w-4 h-4" />
+          Merchants
+        </TabsTrigger>
+      </TabsList>
 
-        {/* Personal Information Tab */}
-        <TabsContent value="personal" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Personal Information</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="firstName">First Name</Label>
+      <TabsContent value="personal" className="space-y-6">
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <User className="w-5 h-5" />
+                  Personal Information
+                </CardTitle>
+                <CardDescription>Manage your personal account information</CardDescription>
+              </div>
+              <div className="flex gap-2">
+                {editing ? (
+                  <>
+                    <Button
+                      onClick={handleSave}
+                      size="sm"
+                      className="flex items-center gap-1"
+                      disabled={saving}
+                    >
+                      <Save className="w-4 h-4" />
+                      {saving ? "Saving..." : "Save"}
+                    </Button>
+                    <Button
+                      onClick={handleCancel}
+                      variant="outline"
+                      size="sm"
+                      className="flex items-center gap-1"
+                      disabled={saving}
+                    >
+                      <X className="w-4 h-4" />
+                      Cancel
+                    </Button>
+                  </>
+                ) : (
+                  <Button
+                    onClick={handleEdit}
+                    variant="outline"
+                    size="sm"
+                    className="flex items-center gap-1"
+                  >
+                    <Edit className="w-4 h-4" />
+                    Edit
+                  </Button>
+                )}
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {error && (
+              <div className="p-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-md">
+                {error}
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <Label htmlFor="name">Full Name</Label>
+                {editing ? (
                   <Input
-                    id="firstName"
-                    value={profile.firstName}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                      handleProfileChange("firstName", e.target.value)
-                    }
+                    id="name"
+                    value={editForm.name}
+                    onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                    disabled={saving}
                   />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="lastName">Last Name</Label>
-                  <Input
-                    id="lastName"
-                    value={profile.lastName}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                      handleProfileChange("lastName", e.target.value)
-                    }
-                  />
-                </div>
+                ) : (
+                  <div className="p-2 bg-gray-50 rounded-md">{user.name}</div>
+                )}
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={profile.email}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                    handleProfileChange("email", e.target.value)
-                  }
-                />
+                <Label htmlFor="email">Email Address</Label>
+                {editing ? (
+                  <Input
+                    id="email"
+                    type="email"
+                    value={editForm.email}
+                    onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                    disabled={saving}
+                  />
+                ) : (
+                  <div className="p-2 bg-gray-50 rounded-md">{user.email}</div>
+                )}
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="phone">Phone Number</Label>
-                <Input
-                  id="phone"
-                  value={profile.phone}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                    handleProfileChange("phone", e.target.value)
-                  }
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="bio">Bio</Label>
-                <Textarea
-                  id="bio"
-                  placeholder="Tell us about yourself..."
-                  value={profile.bio}
-                  onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
-                    handleProfileChange("bio", e.target.value)
-                  }
-                  className="min-h-[100px]"
-                />
-              </div>
-
-              <Separator />
-
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="company">Company</Label>
+                {editing ? (
                   <Input
-                    id="company"
-                    value={profile.company}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                      handleProfileChange("company", e.target.value)
-                    }
+                    id="phone"
+                    value={editForm.phone}
+                    onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
+                    disabled={saving}
                   />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="position">Position</Label>
-                  <Input
-                    id="position"
-                    value={profile.position}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                      handleProfileChange("position", e.target.value)
-                    }
-                  />
-                </div>
+                ) : (
+                  <div className="p-2 bg-gray-50 rounded-md">{user.phone}</div>
+                )}
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="website">Website</Label>
-                <Input
-                  id="website"
-                  type="url"
-                  value={profile.website}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                    handleProfileChange("website", e.target.value)
-                  }
-                />
-              </div>
-
-              <Button className="w-full md:w-auto">
-                <Save className="mr-2 h-4 w-4" />
-                Save Changes
-              </Button>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Security Tab */}
-        <TabsContent value="security" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Change Password</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="currentPassword">Current Password</Label>
-                <Input id="currentPassword" type="password" />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="newPassword">New Password</Label>
-                <Input id="newPassword" type="password" />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="confirmPassword">Confirm New Password</Label>
-                <Input id="confirmPassword" type="password" />
-              </div>
-              <Button>Update Password</Button>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Two-Factor Authentication</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium">Enable 2FA</p>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
-                    Add an extra layer of security to your account
-                  </p>
-                </div>
-                <Switch />
-              </div>
-              <Button variant="outline">
-                <Shield className="mr-2 h-4 w-4" />
-                Setup Authenticator App
-              </Button>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Notifications Tab */}
-        <TabsContent value="notifications" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Notification Preferences</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium">Email Notifications</p>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
-                    Receive notifications via email
-                  </p>
-                </div>
-                <Switch
-                  checked={notifications.emailNotifications}
-                  onCheckedChange={(value: boolean) =>
-                    handleNotificationChange("emailNotifications", value)
-                  }
-                />
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium">Push Notifications</p>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
-                    Receive push notifications in your browser
-                  </p>
-                </div>
-                <Switch
-                  checked={notifications.pushNotifications}
-                  onCheckedChange={(value: boolean) =>
-                    handleNotificationChange("pushNotifications", value)
-                  }
-                />
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium">Marketing Emails</p>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
-                    Receive emails about new features and updates
-                  </p>
-                </div>
-                <Switch
-                  checked={notifications.marketingEmails}
-                  onCheckedChange={(value: boolean) =>
-                    handleNotificationChange("marketingEmails", value)
-                  }
-                />
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium">Security Alerts</p>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
-                    Receive important security notifications
-                  </p>
-                </div>
-                <Switch
-                  checked={notifications.securityAlerts}
-                  onCheckedChange={(value: boolean) =>
-                    handleNotificationChange("securityAlerts", value)
-                  }
-                />
-              </div>
-
-              <Button>Save Preferences</Button>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Preferences Tab */}
-        <TabsContent value="preferences" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Regional Settings</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="timezone">Timezone</Label>
-                  <Select
-                    value={profile.timezone}
-                    onValueChange={(value: string) => handleProfileChange("timezone", value)}
+                <Label>Role</Label>
+                <div className="p-2 bg-gray-50 rounded-md">
+                  <Badge
+                    variant={user.role === "admin" ? "destructive" : "default"}
+                    className="capitalize"
                   >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Asia/Jakarta">Asia/Jakarta (WIB)</SelectItem>
-                      <SelectItem value="Asia/Makassar">Asia/Makassar (WITA)</SelectItem>
-                      <SelectItem value="Asia/Jayapura">Asia/Jayapura (WIT)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="language">Language</Label>
-                  <Select defaultValue="en">
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="en">English</SelectItem>
-                      <SelectItem value="id">Bahasa Indonesia</SelectItem>
-                    </SelectContent>
-                  </Select>
+                    {user.role}
+                  </Badge>
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="location">Location</Label>
-                <Input
-                  id="location"
-                  value={profile.location}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                    handleProfileChange("location", e.target.value)
-                  }
-                />
+                <Label>User ID</Label>
+                <div className="p-2 bg-gray-50 rounded-md font-mono text-sm">{user.id}</div>
               </div>
 
-              <Button>Save Settings</Button>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
-    </div>
+              <div className="space-y-2">
+                <Label>Account Created</Label>
+                <div className="p-2 bg-gray-50 rounded-md text-sm">
+                  {formatDate(user.created_at)}
+                </div>
+              </div>
+            </div>
+
+            <Separator />
+
+            <div className="space-y-2">
+              <Label>Last Updated</Label>
+              <div className="p-2 bg-gray-50 rounded-md text-sm">{formatDate(user.updated_at)}</div>
+            </div>
+          </CardContent>
+        </Card>
+      </TabsContent>
+
+      <TabsContent value="merchants" className="space-y-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Building2 className="w-5 h-5" />
+              Associated Merchants
+            </CardTitle>
+            <CardDescription>Manage your merchant accounts and businesses</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {user.merchants && user.merchants.length > 0 ? (
+              <div className="space-y-4">
+                {user.merchants.map((merchant) => (
+                  <Card key={merchant.id} className="border-l-4 border-l-blue-500">
+                    <CardHeader className="pb-3">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <CardTitle className="text-lg">{merchant.name}</CardTitle>
+                          <CardDescription className="flex items-center gap-4 text-sm">
+                            <span className="font-mono">ID: {merchant.id}</span>
+                            <span>Owner ID: {merchant.owner_id}</span>
+                          </CardDescription>
+                        </div>
+                        <Badge variant="outline">Active</Badge>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="pt-0">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                        <div className="flex items-center gap-2 text-gray-600">
+                          <Calendar className="w-4 h-4" />
+                          <span>Created: {formatDate(merchant.created_at)}</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-gray-600">
+                          <Calendar className="w-4 h-4" />
+                          <span>Updated: {formatDate(merchant.updated_at)}</span>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <Building2 className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">No Merchants Found</h3>
+                <p className="text-gray-500">
+                  You don't have any associated merchant accounts yet.
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </TabsContent>
+    </Tabs>
   );
 }

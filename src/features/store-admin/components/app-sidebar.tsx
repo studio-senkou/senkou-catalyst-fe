@@ -1,6 +1,7 @@
 import * as React from "react";
-import { LayoutDashboard, Package, FolderTree, Zap } from "lucide-react";
+import { LayoutDashboard, Package, FolderTree, Zap, Store } from "lucide-react";
 import { useLocation } from "react-router-dom";
+import { apiAuth } from "@/api/api-auth";
 
 import { NavUser } from "./nav-user";
 import {
@@ -61,12 +62,24 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const location = useLocation();
   const currentPath = location.pathname.split("/").pop() || location.pathname.slice(1);
 
+  // Get current merchant ID for store navigation
+  const merchantId = apiAuth.getCurrentMerchantId();
+  const isAdmin = apiAuth.isCurrentUserAdmin();
+
   const isMenuActive = (url: string) => {
     if (!currentPath || currentPath === "") {
       return url === "dashboard";
     }
 
     return currentPath === url || currentPath.includes(url);
+  };
+
+  // Function to handle store page navigation
+  const handleStoreNavigation = () => {
+    if (merchantId) {
+      // Open in new tab/window
+      window.open(`/merchant/${merchantId}/home`, "_blank");
+    }
   };
 
   return (
@@ -88,6 +101,20 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
+
+              {/* Store Page Button - Only show for non-admin users with merchantId */}
+              {!isAdmin && merchantId && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    onClick={handleStoreNavigation}
+                    tooltip="View Store"
+                    className="cursor-pointer"
+                  >
+                    <Store />
+                    <span>View Store</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

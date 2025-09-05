@@ -91,7 +91,6 @@ export const apiCategory = {
       }
 
       const response = await api.get<GetCategoriesResponse>(`/merchants/${merchantID}/categories`);
-      console.log(response.data);
       return response.data;
     } catch (error: any) {
       if (error.response?.status === 401) {

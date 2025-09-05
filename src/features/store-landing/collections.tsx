@@ -3,62 +3,79 @@ import { useEffect, useState } from "react";
 import Navbar from "./components/sections/navbar";
 import Footer from "./components/sections/footer";
 import Announcement from "./components/sections/announcement";
-import { popularProducts } from "./constants/products";
 import ProductCard from "./components/productCard";
 import { Filter, ChevronDown, ChevronUp, ChevronLeft, ChevronRight } from "lucide-react";
+import { apiProduct, type Product } from "../store-admin/products/api/api-product";
+import { apiAuth } from "@/api/api-auth";
 
 // Utility functions
-const normalizeProduct = (product: any): Product => {
-  return {
-    id: product.id,
-    name: product.name,
-    category: product.category || "uncategorized",
-    price: product.price,
-    stock: product.stock || 0,
-    status: product.status || "active",
-    image: product.image || "",
-    description: product.description || "",
-    brand: product.brand || "",
-    rating: product.rating || "0",
-    isNew: product.isNew || false,
-    bgColor: product.bgColor || "",
-    originalPrice: product.originalPrice || "",
-    discount: product.discount || "",
-  };
-};
-
 const getNumericPrice = (price: string | number): number => {
   if (typeof price === "number") return price;
   return parseFloat(price.replace(/[^0-9.]/g, "")) || 0;
 };
 
 // Define filter types
-type SortOption = "newest" | "price-low" | "price-high" | "rating";
+type SortOption = "newest" | "price-low" | "price-high" | "title";
 type FilterState = {
-  category: string;
   minPrice: number;
   maxPrice: number;
-  showNew: boolean;
   sort: SortOption;
+  searchTerm: string;
+};
+
+// Transform API product to match ProductCard props
+interface ProductCardData {
+  id: string;
+  name: string;
+  price: string;
+  rating: string;
+  isNew: boolean;
+  image: string;
+}
+
+const transformProduct = (apiProduct: Product): ProductCardData => {
+  // Check if product is new (created within last 7 days)
+  const isNew = apiProduct.created_at
+    ? new Date().getTime() - new Date(apiProduct.created_at).getTime() < 7 * 24 * 60 * 60 * 1000
+    : false;
+
+  // Get first photo or use placeholder
+  const image =
+    apiProduct.photos && apiProduct.photos.length > 0
+      ? `${import.meta.env.VITE_API_URL}/files/${apiProduct.photos[0]}` // Update with your actual API domain
+      : `https://picsum.photos/seed/${apiProduct.id}/500/600`;
+
+  // Format price - handle both string and number types safely
+  const formatPrice = (price: string | number): string => {
+    const numericPrice = typeof price === "string" ? parseFloat(price) : price;
+    return isNaN(numericPrice) ? "$0" : `${numericPrice.toLocaleString()}`;
+  };
+
+  return {
+    id: apiProduct.id,
+    name: apiProduct.title,
+    price: formatPrice(apiProduct.price),
+    rating: "4.5", // Default rating since API doesn't provide it
+    isNew,
+    image,
+  };
 };
 
 export default function Collection() {
-  // Image generator
-  const [getRandomImage, setRandomImage] = useState<((w: number, h: number) => string) | null>(
-    null,
-  );
+  const merchantID = apiAuth.getCurrentMerchantId() || "";
 
   // Products state
   const [products, setProducts] = useState<Product[]>([]);
-  const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
+  const [filteredProducts, setFilteredProducts] = useState<ProductCardData[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   // Filter state
   const [filters, setFilters] = useState<FilterState>({
-    category: "all",
     minPrice: 0,
-    maxPrice: 1000,
-    showNew: false,
+    maxPrice: Number.MAX_SAFE_INTEGER,
     sort: "newest",
+    searchTerm: "",
   });
 
   // UI state
@@ -66,66 +83,67 @@ export default function Collection() {
   const [currentPage, setCurrentPage] = useState(1);
   const productsPerPage = 12;
 
-  // Categories derived from products
-  const [categories, setCategories] = useState<string[]>([]);
-
-  useEffect(() => {
-    // Set the random image generator
-    const imageGenerator = (width: number, height: number) => {
-      const randomSeed = Math.floor(Math.random() * 1000);
-      return `https://picsum.photos/seed/${randomSeed}/${width}/${height}`;
-    };
-    setRandomImage(() => imageGenerator);
-
-    // Initialize products and extract categories
-    const productCategories = ["clothing", "accessories", "footwear", "jewelry"];
-
-    // Normalize and enhance products
-    const allProducts: Product[] = popularProducts.map((product: any) => {
-      const normalizedProduct = normalizeProduct(product);
-
-      return {
-        ...normalizedProduct,
-        category: productCategories[Math.floor(Math.random() * productCategories.length)],
-        image: normalizedProduct.image || imageGenerator(500, 600),
-        stock: Math.floor(Math.random() * 100) + 1, // Random stock for demo
-        status: "active",
-      };
+  const clearAllFilters = () => {
+    setFilters({
+      minPrice: 0,
+      maxPrice: Number.MAX_SAFE_INTEGER,
+      sort: "newest",
+      searchTerm: "",
     });
+  };
 
-    setProducts(allProducts);
+  // Fetch products from API
+  useEffect(() => {
+    const fetchProducts = async () => {
+      if (!merchantID) {
+        setError("Merchant ID not found");
+        setLoading(false);
+        return;
+      }
 
-    // Extract unique categories from products
-    const uniqueCategories = Array.from(
-      new Set(allProducts.map((product) => product.category || "uncategorized")),
-    );
-    setCategories(["all", ...uniqueCategories]);
-  }, []);
+      try {
+        setLoading(true);
+        const response = await apiProduct.getProductsByMerchant(merchantID);
+        setProducts(response.data.products);
+        setError(null);
+      } catch (err) {
+        console.error("Failed to fetch products:", err);
+        setError(err instanceof Error ? err.message : "Failed to fetch products");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProducts();
+  }, [merchantID]);
 
   // Apply filters whenever filter state changes
   useEffect(() => {
     let result = [...products];
 
-    // Apply category filter
-    if (filters.category !== "all") {
-      result = result.filter((product) => product.category === filters.category);
+    // Apply search filter
+    if (filters.searchTerm) {
+      result = result.filter(
+        (product) =>
+          product.title.toLowerCase().includes(filters.searchTerm.toLowerCase()) ||
+          (product.description &&
+            product.description.toLowerCase().includes(filters.searchTerm.toLowerCase())),
+      );
     }
 
-    // Apply price filter - handle both string and number prices
+    // Apply price filter
     result = result.filter((product) => {
       const numPrice = getNumericPrice(product.price);
       return numPrice >= filters.minPrice && numPrice <= filters.maxPrice;
     });
 
-    // Apply new items filter
-    if (filters.showNew) {
-      result = result.filter((product) => product.isNew);
-    }
-
     // Apply sorting
     switch (filters.sort) {
       case "newest":
-        result = [...result].sort((a, b) => Number(b.id) - Number(a.id));
+        result = [...result].sort((a, b) => {
+          if (!a.created_at || !b.created_at) return 0;
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        });
         break;
       case "price-low":
         result = [...result].sort((a, b) => {
@@ -141,16 +159,14 @@ export default function Collection() {
           return priceB - priceA;
         });
         break;
-      case "rating":
-        result = [...result].sort((a, b) => {
-          const ratingA = parseFloat(a.rating || "0");
-          const ratingB = parseFloat(b.rating || "0");
-          return ratingB - ratingA;
-        });
+      case "title":
+        result = [...result].sort((a, b) => a.title.localeCompare(b.title));
         break;
     }
 
-    setFilteredProducts(result);
+    // Transform products to match ProductCard interface
+    const transformedProducts = result.map(transformProduct);
+    setFilteredProducts(transformedProducts);
     setCurrentPage(1); // Reset to first page when filters change
   }, [filters, products]);
 
@@ -210,8 +226,6 @@ export default function Collection() {
     return pages;
   };
 
-  if (!getRandomImage) return null;
-
   return (
     <div className="min-h-screen bg-white font-sans text-gray-900">
       {/* Announcement Bar*/}
@@ -228,7 +242,7 @@ export default function Collection() {
                 PRODUCTS
               </div>
               <h2 className="text-3xl font-bold relative before:content-[''] before:absolute before:w-16 before:h-1 before:-bottom-2 before:left-0 before:bg-yellow-600">
-                All Collection
+                My Collection
               </h2>
             </div>
 
@@ -243,7 +257,7 @@ export default function Collection() {
                   <option value="newest">Newest</option>
                   <option value="price-low">Price: Low to High</option>
                   <option value="price-high">Price: High to Low</option>
-                  <option value="rating">Top Rated</option>
+                  <option value="title">Name: A to Z</option>
                 </select>
                 <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
                   <ChevronDown size={16} />
@@ -268,24 +282,17 @@ export default function Collection() {
           {/* Filter section */}
           {isFilterOpen && (
             <div className="mb-8 p-6 bg-white rounded-md shadow-sm border border-gray-100 transition-all">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {/* Category filter */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Search filter */}
                 <div>
-                  <h3 className="font-medium text-sm mb-3">Category</h3>
-                  <div className="space-y-2">
-                    {categories.map((category) => (
-                      <label key={category} className="flex items-center cursor-pointer">
-                        <input
-                          type="radio"
-                          name="category"
-                          checked={filters.category === category}
-                          onChange={() => handleFilterChange("category", category)}
-                          className="form-radio text-yellow-600 focus:ring-yellow-500 h-4 w-4"
-                        />
-                        <span className="ml-2 text-sm capitalize">{category}</span>
-                      </label>
-                    ))}
-                  </div>
+                  <h3 className="font-medium text-sm mb-3">Search Products</h3>
+                  <input
+                    type="text"
+                    placeholder="Search by name or description..."
+                    value={filters.searchTerm}
+                    onChange={(e) => handleFilterChange("searchTerm", e.target.value)}
+                    className="form-input rounded-md border-gray-200 w-full text-sm focus:border-yellow-600 focus:ring focus:ring-yellow-200"
+                  />
                 </div>
 
                 {/* Price range filter */}
@@ -306,41 +313,25 @@ export default function Collection() {
                       <input
                         type="number"
                         min={filters.minPrice}
-                        value={filters.maxPrice}
-                        onChange={(e) => handleFilterChange("maxPrice", Number(e.target.value))}
+                        value={filters.maxPrice === Number.MAX_SAFE_INTEGER ? "" : filters.maxPrice}
+                        onChange={(e) => {
+                          const value =
+                            e.target.value === ""
+                              ? Number.MAX_SAFE_INTEGER
+                              : Number(e.target.value);
+                          handleFilterChange("maxPrice", value);
+                        }}
                         className="form-input rounded-md border-gray-200 w-full text-sm focus:border-yellow-600 focus:ring focus:ring-yellow-200"
                       />
                     </div>
                   </div>
-                </div>
-
-                {/* Other filters */}
-                <div>
-                  <h3 className="font-medium text-sm mb-3">Other Filters</h3>
-                  <label className="flex items-center cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={filters.showNew}
-                      onChange={(e) => handleFilterChange("showNew", e.target.checked)}
-                      className="form-checkbox text-yellow-600 focus:ring-yellow-500 h-4 w-4"
-                    />
-                    <span className="ml-2 text-sm">New arrivals only</span>
-                  </label>
                 </div>
               </div>
 
               {/* Clear filters button */}
               <div className="mt-6 flex justify-end">
                 <button
-                  onClick={() =>
-                    setFilters({
-                      category: "all",
-                      minPrice: 0,
-                      maxPrice: 1000,
-                      showNew: false,
-                      sort: "newest",
-                    })
-                  }
+                  onClick={clearAllFilters}
                   className="text-sm text-gray-600 hover:text-yellow-600 transition-colors focus:outline-none"
                 >
                   Clear all filters
@@ -349,48 +340,63 @@ export default function Collection() {
             </div>
           )}
 
-          {/* Product count and results */}
-          <div className="mb-6 flex justify-between items-center">
-            <p className="text-sm text-gray-500">
-              Showing {Math.min(filteredProducts.length, startIndex + 1)}-
-              {Math.min(filteredProducts.length, startIndex + productsPerPage)} of{" "}
-              {filteredProducts.length} products
-            </p>
-          </div>
-
-          {/* Products grid */}
-          {currentProducts.length > 0 ? (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-              {currentProducts.map((product) => (
-                <ProductCard
-                  key={product.id}
-                  {...product}
-                  image={product.image || getRandomImage(500, 600)}
-                />
-              ))}
-            </div>
-          ) : (
+          {/* Loading state */}
+          {loading && (
             <div className="py-12 text-center">
-              <p className="text-gray-500">No products match your filters.</p>
+              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-yellow-600"></div>
+              <p className="mt-2 text-gray-500">Loading products...</p>
+            </div>
+          )}
+
+          {/* Error state */}
+          {error && (
+            <div className="py-12 text-center">
+              <p className="text-red-500 mb-4">{error}</p>
               <button
-                onClick={() =>
-                  setFilters({
-                    category: "all",
-                    minPrice: 0,
-                    maxPrice: 1000,
-                    showNew: false,
-                    sort: "newest",
-                  })
-                }
-                className="mt-4 text-yellow-600 underline hover:text-yellow-700 transition-colors focus:outline-none"
+                onClick={() => window.location.reload()}
+                className="text-yellow-600 underline hover:text-yellow-700 transition-colors focus:outline-none"
               >
-                Clear filters
+                Try again
               </button>
             </div>
           )}
 
+          {/* Product count and results */}
+          {!loading && !error && (
+            <div className="mb-6 flex justify-between items-center">
+              <p className="text-sm text-gray-500">
+                Showing {Math.min(filteredProducts.length, startIndex + 1)}-
+                {Math.min(filteredProducts.length, startIndex + productsPerPage)} of{" "}
+                {filteredProducts.length} products
+              </p>
+            </div>
+          )}
+
+          {/* Products grid */}
+          {!loading && !error && (
+            <>
+              {currentProducts.length > 0 ? (
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                  {currentProducts.map((product) => (
+                    <ProductCard key={product.id} {...product} />
+                  ))}
+                </div>
+              ) : (
+                <div className="py-12 text-center">
+                  <p className="text-gray-500">No products match your filters.</p>
+                  <button
+                    onClick={clearAllFilters}
+                    className="mt-4 text-yellow-600 underline hover:text-yellow-700 transition-colors focus:outline-none"
+                  >
+                    Clear filters
+                  </button>
+                </div>
+              )}
+            </>
+          )}
+
           {/* Pagination */}
-          {totalPages > 1 && (
+          {!loading && !error && totalPages > 1 && (
             <div className="mt-12 flex justify-center">
               <nav className="flex items-center space-x-1">
                 <button

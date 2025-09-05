@@ -80,7 +80,8 @@ export default function Navbar() {
 
     // For merchant routes, check if merchantId in URL matches cookie
     if (location.pathname.includes("/merchant/")) {
-      return cookieMerchantId === routeMerchantId;
+      const merchantIdFromPath = location.pathname.split("/merchant/")[1]?.split("/")[0];
+      return cookieMerchantId === merchantIdFromPath;
     }
 
     // For other routes (like root, login, register), don't show user button

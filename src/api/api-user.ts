@@ -40,6 +40,22 @@ export const apiUser = {
     }
   },
 
+  // Update current user (requires authentication)
+  async updateCurrentUser(userData: UpdateUserRequest): Promise<UpdateUserResponse> {
+    try {
+      const response = await api.put<UpdateUserResponse>('/users/me', userData);
+      return response.data;
+    } catch (error: any) {
+      // Handle validation errors from backend
+      if (error.response?.data?.errors) {
+        const validationErrors = error.response.data.errors;
+        const errorMessages = Object.values(validationErrors).join(', ');
+        throw new Error(errorMessages);
+      }
+      throw new Error(error.response?.data?.message || 'Failed to update user');
+    }
+  },
+
   // Check if user is authenticated
   isAuthenticated(): boolean {
     return !!tokenManager.getAccessToken();

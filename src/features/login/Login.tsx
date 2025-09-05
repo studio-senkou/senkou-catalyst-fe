@@ -60,15 +60,18 @@ export default function Login() {
     }
 
     try {
-      // Use the updated login method that fetches user data
       const result = await login(formData);
 
-      if (result && result.merchantId) {
-        // Navigate to merchant-specific dashboard
-        navigate(`/merchant/${result.merchantId}/home`);
+      if (result) {
+        const userData = apiAuth.getCurrentUserData();
+
+        if (userData?.role === "admin") {
+          navigate("/admin/dashboard");
+        } else if (result.merchantId) {
+          navigate(`/admin/${result.merchantId}/dashboard`);
+        }
       } else {
-        // Fallback to general dashboard
-        navigate("/dashboard");
+        setError("Login gagal, silakan coba lagi");
       }
     } catch (err: any) {
       setError(getErrorMessage(err));
@@ -76,18 +79,16 @@ export default function Login() {
   };
 
   const handleGoogleLogin = () => {
-    // TODO: Implement Google OAuth login
     console.log("Google login clicked");
   };
 
-  // If already authenticated, redirect immediately
   useEffect(() => {
     if (isAuthenticated) {
       const merchantId = apiAuth.getCurrentMerchantId();
       if (merchantId) {
         navigate(`/merchant/${merchantId}/home`);
       } else {
-        navigate("/dashboard");
+        navigate("/admin/dashboard");
       }
     }
   }, [isAuthenticated, navigate]);
