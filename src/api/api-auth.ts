@@ -11,9 +11,18 @@ export const apiAuth = {
     try {
       const loginResponse = await api.post<LoginResponse>('/auth/login', credentials);
       
+      const { 
+        access_token, 
+        refresh_token, 
+        access_token_expiry, 
+        refresh_token_expiry 
+      } = loginResponse.data.data;
+
       tokenManager.saveTokens(
-        loginResponse.data.data.access_token,    
-        loginResponse.data.data.refresh_token
+        access_token,
+        refresh_token,
+        access_token_expiry,
+        refresh_token_expiry
       );
 
       const userResponse = await apiUser.getCurrentUser();
@@ -57,33 +66,46 @@ export const apiAuth = {
         merchantId: merchantId
       };
     } catch (error: any) {
-      // Clear tokens if login fails
       tokenManager.clearTokens();
       throw new Error(error.response?.data?.message || 'Login failed');
     }
   },
 
-  // Refresh token
   async refreshToken(): Promise<RefreshTokenResponse> {
     try {
-      const refreshToken = tokenManager.getRefreshToken();
-      if (!refreshToken) {
-        throw new Error('No refresh token available');
+      await tokenManager.refreshTokens();
+
+      try {
+        const userResponse = await apiUser.getCurrentUser();
+        const user = userResponse.data.user;
+        
+        if (user.role !== 'admin' && user.merchants && user.merchants.length > 0) {
+          const merchantId = user.merchants[0].id;
+          tokenManager.saveMerchantId(merchantId);
+        }
+        
+        tokenManager.saveUserData({
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          phone: user.phone,
+          role: user.role,
+          merchants: user.merchants || []
+        });
+      } catch (userError) {
+        console.warn('Failed to refresh user data after token refresh:', userError);
       }
 
-      const response = await api.put<RefreshTokenResponse>('/auth/refresh', {
-        refreshToken,
-      });
-
-      // Save new tokens
-      tokenManager.saveTokens(
-        response.data.data.access_token,    
-        response.data.data.refresh_token
-      );
-
-      return response.data;
+      return {
+        message: 'Token refreshed successfully',
+        data: {
+          access_token: tokenManager.getAccessToken()!,
+          refresh_token: tokenManager.getRefreshToken()!,
+          access_token_expiry: '',
+          refresh_token_expiry: ''
+        }
+      };
     } catch (error: any) {
-      tokenManager.clearTokens();
       throw new Error(error.response?.data?.message || 'Token refresh failed');
     }
   },
@@ -95,23 +117,37 @@ export const apiAuth = {
       tokenManager.clearTokens();
       return response.data;
     } catch (error: any) {
-      // Clear tokens even if logout request fails
       tokenManager.clearTokens();
       throw new Error(error.response?.data?.message || 'Logout failed');
     }
   },
 
-  // Check if user is authenticated
   isAuthenticated(): boolean {
     return !!tokenManager.getAccessToken();
   },
 
-  // Get current access token
+  async checkAuthWithRefresh(): Promise<boolean> {
+    try {
+      if (this.isAuthenticated()) {
+        return true;
+      }
+
+      const refreshToken = tokenManager.getRefreshToken();
+      if (!refreshToken) {
+        return false;
+      }
+
+      await tokenManager.refreshTokens();
+      return true;
+    } catch (error) {
+      return false;
+    }
+  },
+
   getAccessToken(): string | null {
     return tokenManager.getAccessToken();
   },
 
-  // Get current merchant ID (will return null for admin users)
   getCurrentMerchantId(): string | null {
     const userData = tokenManager.getUserData();
     // Return null for admin users since they don't need merchant ID
@@ -130,5 +166,10 @@ export const apiAuth = {
   isCurrentUserAdmin(): boolean {
     const userData = tokenManager.getUserData();
     return userData?.role === 'admin';
+  },
+
+  // Check if refresh token exists
+  hasRefreshToken(): boolean {
+    return !!tokenManager.getRefreshToken();
   },
 };

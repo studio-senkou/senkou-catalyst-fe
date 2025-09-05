@@ -9,6 +9,7 @@ class TokenManager {
   private accessToken: string | null = null;
   private refreshToken: string | null = null;
   private isRefreshing: boolean = false;
+  private refreshPromise: Promise<string> | null = null; // Add this to prevent multiple refresh calls
   private failedQueue: Array<{
     resolve: (value?: any) => void;
     reject: (error?: any) => void;
@@ -25,7 +26,6 @@ class TokenManager {
     path: '/',
     secure: typeof window !== 'undefined' ? window.location.protocol === 'https:' : false,
     sameSite: 'lax' as const,
-    maxAge: 7 * 24 * 60 * 60, // 7 days in seconds
   };
 
   static getInstance(): TokenManager {
@@ -46,18 +46,40 @@ class TokenManager {
     }
   }
 
-  saveTokens(accessToken: string, refreshToken: string): void {
+  // Convert timestamp to seconds for maxAge
+  private timestampToMaxAge(timestampStr: string): number {
+    const expiryTime = parseInt(timestampStr);
+    const currentTime = Math.floor(Date.now() / 1000);
+    const maxAge = expiryTime - currentTime;
+    return maxAge > 0 ? maxAge : 0;
+  }
+
+  saveTokens(
+    accessToken: string, 
+    refreshToken: string, 
+    accessTokenExpiry?: string, 
+    refreshTokenExpiry?: string
+  ): void {
     if (typeof window !== 'undefined') {
-      // Set access token with shorter expiry (typically 15 minutes to 1 hour)
+      // Calculate maxAge from expiry timestamps or use defaults
+      const accessMaxAge = accessTokenExpiry 
+        ? this.timestampToMaxAge(accessTokenExpiry)
+        : 60 * 60; // Default 1 hour
+
+      const refreshMaxAge = refreshTokenExpiry 
+        ? this.timestampToMaxAge(refreshTokenExpiry)
+        : 7 * 24 * 60 * 60; // Default 7 days
+
+      // Set access token with calculated expiry
       CookieManager.setCookie(this.ACCESS_TOKEN_KEY, accessToken, {
         ...this.cookieOptions,
-        maxAge: 60 * 60, // 1 hour
+        maxAge: accessMaxAge,
       });
 
-      // Set refresh token with longer expiry (typically 7-30 days)
+      // Set refresh token with calculated expiry
       CookieManager.setCookie(this.REFRESH_TOKEN_KEY, refreshToken, {
         ...this.cookieOptions,
-        maxAge: 7 * 24 * 60 * 60, // 7 days
+        maxAge: refreshMaxAge,
       });
     }
     this.accessToken = accessToken;
@@ -122,6 +144,8 @@ class TokenManager {
     }
     this.accessToken = null;
     this.refreshToken = null;
+    this.isRefreshing = false;
+    this.refreshPromise = null; // Reset refresh promise
   }
 
   getAccessToken(): string | null {
@@ -142,10 +166,64 @@ class TokenManager {
 
   setRefreshing(status: boolean): void {
     this.isRefreshing = status;
+    if (!status) {
+      this.refreshPromise = null; // Clear promise when done refreshing
+    }
   }
 
   isCurrentlyRefreshing(): boolean {
     return this.isRefreshing;
+  }
+
+  // New method to handle single refresh promise
+  async refreshTokens(): Promise<string> {
+    // If already refreshing, return existing promise
+    if (this.refreshPromise) {
+      return this.refreshPromise;
+    }
+
+    // Create new refresh promise
+    this.refreshPromise = this.performRefresh();
+    return this.refreshPromise;
+  }
+
+  private async performRefresh(): Promise<string> {
+    try {
+      this.setRefreshing(true);
+
+      const refreshToken = this.getRefreshToken();
+      if (!refreshToken) {
+        throw new Error('No refresh token available');
+      }
+
+      const response = await axios.put(`${api.defaults.baseURL}/auth/refresh`, {
+        refresh_token: refreshToken, // Fixed: use refresh_token
+      });
+
+      // Use correct field names from API response
+      const { 
+        access_token, 
+        refresh_token, 
+        access_token_expiry, 
+        refresh_token_expiry 
+      } = response.data.data;
+
+      this.saveTokens(
+        access_token, 
+        refresh_token, 
+        access_token_expiry, 
+        refresh_token_expiry
+      );
+
+      this.processQueue(null, access_token);
+      return access_token;
+    } catch (error) {
+      this.processQueue(error, null);
+      this.clearTokens();
+      throw error;
+    } finally {
+      this.setRefreshing(false);
+    }
   }
 
   addToFailedQueue(resolve: (value?: any) => void, reject: (error?: any) => void): void {
@@ -177,8 +255,6 @@ const api = axios.create({
   headers: {
     "Content-Type": "application/json",
   },
-  // Remove withCredentials for now since we're managing tokens manually
-  // withCredentials: true,
 });
 
 // Request interceptor
@@ -195,57 +271,29 @@ api.interceptors.request.use(
   }
 );
 
-// Response interceptor
+// Response interceptor - SIMPLIFIED to prevent race condition
 api.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
     const originalRequest = error.config as any;
 
     if (error.response?.status === 401 && !originalRequest._retry) {
-      if (tokenManager.isCurrentlyRefreshing()) {
-        return new Promise((resolve, reject) => {
-          tokenManager.addToFailedQueue(resolve, reject);
-        }).then(() => {
-          if (originalRequest.headers) {
-            originalRequest.headers.Authorization = `Bearer ${tokenManager.getAccessToken()}`;
-          }
-          return api(originalRequest);
-        });
-      }
-
       originalRequest._retry = true;
-      tokenManager.setRefreshing(true);
 
       try {
-        const refreshToken = tokenManager.getRefreshToken();
-        if (!refreshToken) {
-          throw new Error('No refresh token available');
-        }
-
-        const response = await axios.put(`${api.defaults.baseURL}/auth/refresh`, {
-          refreshToken: refreshToken,
-        });
-
-        const { accessToken, refreshToken: newRefreshToken } = response.data.data;
-        tokenManager.saveTokens(accessToken, newRefreshToken);
-        tokenManager.processQueue(null, accessToken);
-
+        // Use the single refresh promise to prevent race condition
+        const newAccessToken = await tokenManager.refreshTokens();
+        
         if (originalRequest.headers) {
-          originalRequest.headers.Authorization = `Bearer ${accessToken}`;
+          originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
         }
         return api(originalRequest);
       } catch (refreshError) {
-        tokenManager.processQueue(refreshError, null);
-        tokenManager.clearTokens();
-        
         // Redirect to login page
         if (typeof window !== 'undefined') {
           window.location.href = '/login';
         }
-        
         return Promise.reject(refreshError);
-      } finally {
-        tokenManager.setRefreshing(false);
       }
     }
 

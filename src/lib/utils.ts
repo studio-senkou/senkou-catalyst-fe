@@ -17,6 +17,8 @@ export const clearAuth = (): void => {
   if (typeof window !== 'undefined') {
     CookieManager.removeCookie('accessToken', { path: '/' });
     CookieManager.removeCookie('refreshToken', { path: '/' });
+    CookieManager.removeCookie('merchantId', { path: '/' });
+    CookieManager.removeCookie('userData', { path: '/' });
   }
 };
 
@@ -31,8 +33,21 @@ export const getRefreshToken = (): string | null => {
   return CookieManager.getCookie('refreshToken');
 };
 
-// Save tokens to cookies
-export const saveTokens = (accessToken: string, refreshToken: string): void => {
+// Convert timestamp to seconds for maxAge
+const timestampToMaxAge = (timestampStr: string): number => {
+  const expiryTime = parseInt(timestampStr);
+  const currentTime = Math.floor(Date.now() / 1000);
+  const maxAge = expiryTime - currentTime;
+  return maxAge > 0 ? maxAge : 0;
+};
+
+// Save tokens to cookies with proper expiry
+export const saveTokens = (
+  accessToken: string, 
+  refreshToken: string, 
+  accessTokenExpiry?: string, 
+  refreshTokenExpiry?: string
+): void => {
   if (typeof window === 'undefined') return;
   
   const cookieOptions = {
@@ -41,16 +56,25 @@ export const saveTokens = (accessToken: string, refreshToken: string): void => {
     sameSite: 'lax' as const,
   };
 
-  // Access token - shorter expiry (1 hour)
+  // Calculate maxAge from expiry timestamps or use defaults
+  const accessMaxAge = accessTokenExpiry 
+    ? timestampToMaxAge(accessTokenExpiry)
+    : 60 * 60; // Default 1 hour
+
+  const refreshMaxAge = refreshTokenExpiry 
+    ? timestampToMaxAge(refreshTokenExpiry)
+    : 7 * 24 * 60 * 60; // Default 7 days
+
+  // Access token with calculated expiry
   CookieManager.setCookie('accessToken', accessToken, {
     ...cookieOptions,
-    maxAge: 60 * 60, // 1 hour
+    maxAge: accessMaxAge,
   });
 
-  // Refresh token - longer expiry (7 days)
+  // Refresh token with calculated expiry
   CookieManager.setCookie('refreshToken', refreshToken, {
     ...cookieOptions,
-    maxAge: 7 * 24 * 60 * 60, // 7 days
+    maxAge: refreshMaxAge,
   });
 };
 

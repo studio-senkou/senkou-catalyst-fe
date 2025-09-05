@@ -1,4 +1,5 @@
 import { Routes, Route, Navigate, useParams } from "react-router-dom";
+import { useState, useEffect } from "react";
 import { apiAuth } from "@/api/api-auth";
 import CatalystLanding from "../features/catalyst-landing/catalyst-landing";
 import Home from "../features/store-landing/home";
@@ -14,17 +15,73 @@ import Categories from "../features/store-admin/categories/categories";
 import Profile from "../features/store-admin/profile/profile";
 import NotFound from "../features/not-found";
 
+// Hook for handling authentication with token refresh
+const useAuthWithRefresh = () => {
+  const [isChecking, setIsChecking] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  const checkAuth = async () => {
+    setIsChecking(true);
+    
+    // First check if already authenticated
+    if (apiAuth.isAuthenticated()) {
+      setIsAuthenticated(true);
+      setIsChecking(false);
+      return true;
+    }
+
+    // If not authenticated, try to refresh token
+    try {
+      await apiAuth.refreshToken();
+      setIsAuthenticated(true);
+      setIsChecking(false);
+      return true;
+    } catch (error) {
+      // If refresh fails, user needs to login
+      setIsAuthenticated(false);
+      setIsChecking(false);
+      return false;
+    }
+  };
+
+  return { isChecking, isAuthenticated, checkAuth };
+};
+
+// Loading component
+const AuthLoadingComponent = () => (
+  <div className="min-h-screen flex items-center justify-center">
+    <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-gray-900"></div>
+  </div>
+);
+
 // Protected Route Component for Merchant Admin Routes (with merchantId)
 const ProtectedMerchantAdminRoute = ({ children }: { children: React.ReactNode }) => {
   const { merchantId } = useParams<{ merchantId: string }>();
-  const isAuthenticated = apiAuth.isAuthenticated();
-  const currentMerchantId = apiAuth.getCurrentMerchantId();
-  const userData = apiAuth.getCurrentUserData();
+  const { isChecking, isAuthenticated, checkAuth } = useAuthWithRefresh();
+  const [hasChecked, setHasChecked] = useState(false);
 
-  // Check authentication
+  useEffect(() => {
+    const performAuthCheck = async () => {
+      if (!hasChecked) {
+        await checkAuth();
+        setHasChecked(true);
+      }
+    };
+    performAuthCheck();
+  }, [checkAuth, hasChecked]);
+
+  // Show loading while checking authentication
+  if (isChecking || !hasChecked) {
+    return <AuthLoadingComponent />;
+  }
+
+  // Check authentication after refresh attempt
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
+
+  const currentMerchantId = apiAuth.getCurrentMerchantId();
+  const userData = apiAuth.getCurrentUserData();
 
   if (userData?.role === "admin") {
     return <Navigate to="/admin/dashboard" replace />;
@@ -39,13 +96,30 @@ const ProtectedMerchantAdminRoute = ({ children }: { children: React.ReactNode }
 
 // Protected Route Component for Super Admin Routes (without merchantId)
 const ProtectedSuperAdminRoute = ({ children }: { children: React.ReactNode }) => {
-  const isAuthenticated = apiAuth.isAuthenticated();
-  const userData = apiAuth.getCurrentUserData();
+  const { isChecking, isAuthenticated, checkAuth } = useAuthWithRefresh();
+  const [hasChecked, setHasChecked] = useState(false);
 
-  // Check authentication
+  useEffect(() => {
+    const performAuthCheck = async () => {
+      if (!hasChecked) {
+        await checkAuth();
+        setHasChecked(true);
+      }
+    };
+    performAuthCheck();
+  }, [checkAuth, hasChecked]);
+
+  // Show loading while checking authentication
+  if (isChecking || !hasChecked) {
+    return <AuthLoadingComponent />;
+  }
+
+  // Check authentication after refresh attempt
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
+
+  const userData = apiAuth.getCurrentUserData();
 
   // Check if user is admin
   if (userData?.role !== "admin") {
