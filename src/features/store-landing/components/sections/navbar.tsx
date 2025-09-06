@@ -1,12 +1,11 @@
 import { useState, useEffect, useRef } from "react";
-import { useParams, useLocation } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 import { Menu, X, Search, User, Heart, ShoppingBag } from "lucide-react";
 import { apiAuth } from "@/api/api-auth";
 
 export default function Navbar() {
   const searchInputRef = useRef<HTMLDivElement>(null);
   const userDropdownRef = useRef<HTMLDivElement>(null);
-  const { id: routeMerchantId } = useParams();
   const location = useLocation();
 
   const [isScrolled, setIsScrolled] = useState(false);

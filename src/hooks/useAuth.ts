@@ -28,7 +28,7 @@ export const useAuth = () => {
   const login = async (credentials: LoginRequest): Promise<{
     loginResponse: LoginResponse;
     userResponse: GetUserDetailResponse;
-    merchantId: string;
+    merchantId?: string;
   } | null> => {
     try {
       setLoading(true);
@@ -36,7 +36,7 @@ export const useAuth = () => {
       
       // Update state with the results
       setIsAuthenticated(true);
-      setMerchantId(result.merchantId);
+      setMerchantId(result.merchantId || null);
       setUserData(result.userResponse.data.user);
       
       return result;

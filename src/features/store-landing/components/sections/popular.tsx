@@ -7,17 +7,6 @@ type CategoryProps = {
 };
 
 export default function Popular({ getRandomImage }: CategoryProps) {
-  // Transform popularProducts to match ProductCard props format
-  const transformedProducts: Product[] = popularProducts.slice(4, 8).map((product) => ({
-    id: product.id,
-    name: product.name,
-    category: "Fashion", // Add default category
-    price: product.price,
-    rating: product.rating,
-    isNew: product.discount !== undefined, // Using discount as a flag for special treatment
-    image: getRandomImage(500, 600),
-  }));
-
   return (
     <section className="py-16 bg-gray-50">
       <div className="container mx-auto px-4">
@@ -35,16 +24,15 @@ export default function Popular({ getRandomImage }: CategoryProps) {
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-          {transformedProducts.map((product) => (
+          {popularProducts.slice(4, 8).map((product) => (
             <ProductCard
               key={product.id}
               id={product.id}
               name={product.name}
-              category={product.category}
               price={product.price}
               rating={product.rating}
-              isNew={product.isNew}
-              image={product.image}
+              isNew={product.isNew || false}
+              image={getRandomImage(500, 600)}
             />
           ))}
         </div>

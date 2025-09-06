@@ -17,6 +17,21 @@ type FilterState = {
   sort: SortOption;
 };
 
+// Define a local product type that matches the expected data structure
+type LocalProduct = {
+  id: string;
+  name: string;
+  price: number | string;
+  rating: string;
+  isNew?: boolean;
+  category?: string;
+  image?: string;
+  brand?: string;
+  bgColor?: string;
+  originalPrice?: string;
+  discount?: string;
+};
+
 export default function Wishlist() {
   // Image generator
   const [getRandomImage, setRandomImage] = useState<((w: number, h: number) => string) | null>(
@@ -24,9 +39,9 @@ export default function Wishlist() {
   );
 
   // Products state
-  const [products, setProducts] = useState<Product[]>([]);
-  const [wishlistProducts, setWishlistProducts] = useState<Product[]>([]);
-  const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
+  const [products, setProducts] = useState<LocalProduct[]>([]);
+  const [wishlistProducts, setWishlistProducts] = useState<LocalProduct[]>([]);
+  const [filteredProducts, setFilteredProducts] = useState<LocalProduct[]>([]);
 
   // Filter state
   const [filters, setFilters] = useState<FilterState>({
@@ -66,7 +81,7 @@ export default function Wishlist() {
 
     // Initialize products and extract categories
     const productCategories = ["clothing", "accessories", "footwear", "jewelry"];
-    const allProducts: Product[] = [...popularProducts].map((product) => ({
+    const allProducts: LocalProduct[] = [...popularProducts].map((product) => ({
       ...product,
       // Assign category since popularProducts doesn't have it
       category: productCategories[Math.floor(Math.random() * productCategories.length)],
@@ -422,7 +437,6 @@ export default function Wishlist() {
                   rating={product.rating || "0"}
                   isNew={product.isNew || false}
                   image={product.image || getRandomImage(500, 600)}
-                  category={""}
                 />
               ))}
             </div>
