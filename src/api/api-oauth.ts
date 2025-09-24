@@ -1,5 +1,4 @@
 import { tokenManager } from "@/lib/axios";
-import { V1 } from "paseto-ts";
 
 export const apiOAuth = {
   // Redirect ke backend OAuth
