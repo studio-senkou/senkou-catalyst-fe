@@ -63,7 +63,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const currentPath = location.pathname.split("/").pop() || location.pathname.slice(1);
 
   // Get current merchant ID for store navigation
-  const merchantId = apiAuth.getCurrentMerchantId();
+  const merchantUsername = apiAuth.getCurrentMerchantUsername();
   const isAdmin = apiAuth.isCurrentUserAdmin();
 
   const isMenuActive = (url: string) => {
@@ -76,9 +76,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
   // Function to handle store page navigation
   const handleStoreNavigation = () => {
-    if (merchantId) {
+    if (merchantUsername) {
       // Open in new tab/window
-      window.open(`/merchant/${merchantId}/home`, "_blank");
+      window.open(`/${merchantUsername}`, "_blank");
     }
   };
 
@@ -103,7 +103,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               ))}
 
               {/* Store Page Button - Only show for non-admin users with merchantId */}
-              {!isAdmin && merchantId && (
+              {!isAdmin && (
                 <SidebarMenuItem>
                   <SidebarMenuButton
                     onClick={handleStoreNavigation}

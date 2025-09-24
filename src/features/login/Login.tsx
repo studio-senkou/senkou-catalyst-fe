@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { getErrorMessage } from "../../lib/utils";
-import { useAuth } from "../../hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -23,8 +22,9 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [currentFeature, setCurrentFeature] = useState(0);
   const [error, setError] = useState<string>("");
+  const [loading, setLoading] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(apiAuth.isAuthenticated());
 
-  const { login, loading, isAuthenticated } = useAuth();
   const navigate = useNavigate();
 
   const features = [
@@ -40,6 +40,22 @@ export default function Login() {
     return () => clearInterval(interval);
   }, []);
 
+  // Check authentication status on component mount
+  useEffect(() => {
+    const checkAuth = async () => {
+      if (isAuthenticated) {
+        const merchantUsername = apiAuth.getCurrentMerchantUsername();
+        if (merchantUsername) {
+          navigate(`/${merchantUsername}`);
+        } else if (apiAuth.isCurrentUserAdmin()) {
+          navigate("/admin/dashboard");
+        }
+      }
+    };
+
+    checkAuth();
+  }, [isAuthenticated, navigate]);
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
@@ -53,45 +69,32 @@ export default function Login() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    setLoading(true);
 
     if (!formData.email || !formData.password) {
       setError("Email dan password wajib diisi");
+      setLoading(false);
       return;
     }
 
     try {
-      const result = await login(formData);
+      const result = await apiAuth.login(formData);
+      setIsAuthenticated(true);
 
-      if (result) {
-        const userData = apiAuth.getCurrentUserData();
-
-        if (userData?.role === "admin") {
-          navigate("/admin/dashboard");
-        } else if (result.merchantId) {
-          navigate(`/admin/${result.merchantId}/dashboard`);
-        }
+      if (result.merchantUsername) {
+        navigate(`/admin/${result.merchantUsername}/dashboard`);
       } else {
-        setError("Login gagal, silakan coba lagi");
+        navigate("/admin/dashboard");
       }
     } catch (err: any) {
       setError(getErrorMessage(err));
+      setLoading(false);
     }
   };
 
   const handleGoogleLogin = () => {
     console.log("Google login clicked");
   };
-
-  useEffect(() => {
-    if (isAuthenticated) {
-      const merchantId = apiAuth.getCurrentMerchantId();
-      if (merchantId) {
-        navigate(`/merchant/${merchantId}/home`);
-      } else {
-        navigate("/admin/dashboard");
-      }
-    }
-  }, [isAuthenticated, navigate]);
 
   if (isAuthenticated) {
     return (
@@ -218,50 +221,6 @@ export default function Login() {
                   <span className="text-sm font-medium text-gray-700">{feature.text}</span>
                 </motion.div>
               ))}
-            </motion.div>
-
-            {/* Floating SVG Animation */}
-            <motion.div
-              className="relative h-64 hidden lg:block"
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 1, duration: 0.8 }}
-            >
-              <svg viewBox="0 0 400 300" className="w-full h-full">
-                <defs>
-                  <linearGradient id="login-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stopColor="#8B5CF6" stopOpacity="0.6" />
-                    <stop offset="50%" stopColor="#3B82F6" stopOpacity="0.5" />
-                    <stop offset="100%" stopColor="#10B981" stopOpacity="0.4" />
-                  </linearGradient>
-                </defs>
-
-                {/* Floating Elements */}
-                <motion.circle
-                  cx="100"
-                  cy="80"
-                  r="20"
-                  fill="url(#login-gradient)"
-                  animate={{ y: [0, -10, 0], opacity: [0.6, 0.8, 0.6] }}
-                  transition={{ duration: 3, repeat: Infinity }}
-                />
-                <motion.rect
-                  x="250"
-                  y="120"
-                  width="40"
-                  height="40"
-                  rx="8"
-                  fill="url(#login-gradient)"
-                  animate={{ y: [0, 15, 0], opacity: [0.4, 0.7, 0.4] }}
-                  transition={{ duration: 4, repeat: Infinity }}
-                />
-                <motion.polygon
-                  points="150,200 170,160 190,200"
-                  fill="url(#login-gradient)"
-                  animate={{ y: [0, -20, 0], opacity: [0.5, 0.9, 0.5] }}
-                  transition={{ duration: 2.5, repeat: Infinity }}
-                />
-              </svg>
             </motion.div>
           </motion.div>
 

@@ -3,13 +3,12 @@
 import axios, { AxiosError } from "axios";
 import { CookieManager } from "./cookie-utils";
 
-// Token management with cookie storage
 class TokenManager {
   private static instance: TokenManager;
   private accessToken: string | null = null;
   private refreshToken: string | null = null;
   private isRefreshing: boolean = false;
-  private refreshPromise: Promise<string> | null = null; // Add this to prevent multiple refresh calls
+  private refreshPromise: Promise<string> | null = null; 
   private failedQueue: Array<{
     resolve: (value?: any) => void;
     reject: (error?: any) => void;
@@ -18,7 +17,8 @@ class TokenManager {
   // Cookie names
   private readonly ACCESS_TOKEN_KEY = 'accessToken';
   private readonly REFRESH_TOKEN_KEY = 'refreshToken';
-  private readonly MERCHANT_ID_KEY = 'merchantId';
+  private readonly MERCHANT_USERNAME_KEY = 'merchantUsername';
+  private readonly MERCHANT_ID_KEY = 'merchantID';
   private readonly USER_DATA_KEY = 'userData';
 
   // Cookie options
@@ -87,15 +87,23 @@ class TokenManager {
   }
 
   // Save merchant data
-  saveMerchantId(merchantId: string): void {
+  saveMerchantUsername(merchantUsername: string): void {
     if (typeof window !== 'undefined') {
-      CookieManager.setCookie(this.MERCHANT_ID_KEY, merchantId, {
+      CookieManager.setCookie(this.MERCHANT_USERNAME_KEY, merchantUsername, {
         ...this.cookieOptions,
         maxAge: 7 * 24 * 60 * 60, // 7 days
       });
     }
   }
-
+  
+  saveMerchantID(merchantID: string): void {
+    if (typeof window !== 'undefined') {
+      CookieManager.setCookie(this.MERCHANT_ID_KEY, merchantID, {
+        ...this.cookieOptions,
+        maxAge: 7 * 24 * 60 * 60, // 7 days
+      });
+    }
+  }
   // Save user data
   saveUserData(userData: any): void {
     if (typeof window !== 'undefined') {
@@ -107,13 +115,19 @@ class TokenManager {
   }
 
   // Get merchant ID
-  getMerchantId(): string | null {
+  getMerchantUsername(): string | null {
+    if (typeof window !== 'undefined') {
+      return CookieManager.getCookie(this.MERCHANT_USERNAME_KEY);
+    }
+    return null;
+  }
+  
+  getMerchantID(): string | null {
     if (typeof window !== 'undefined') {
       return CookieManager.getCookie(this.MERCHANT_ID_KEY);
     }
     return null;
   }
-
   // Get user data
   getUserData(): any {
     if (typeof window !== 'undefined') {
@@ -135,7 +149,7 @@ class TokenManager {
       CookieManager.removeCookie(this.REFRESH_TOKEN_KEY, {
         path: this.cookieOptions.path,
       });
-      CookieManager.removeCookie(this.MERCHANT_ID_KEY, {
+      CookieManager.removeCookie(this.MERCHANT_USERNAME_KEY, {
         path: this.cookieOptions.path,
       });
       CookieManager.removeCookie(this.USER_DATA_KEY, {

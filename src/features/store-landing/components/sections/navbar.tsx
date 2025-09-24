@@ -1,12 +1,12 @@
 import { useState, useEffect, useRef } from "react";
-import { useLocation } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { Menu, X, Search, User, Heart, ShoppingBag } from "lucide-react";
 import { apiAuth } from "@/api/api-auth";
 
 export default function Navbar() {
   const searchInputRef = useRef<HTMLDivElement>(null);
   const userDropdownRef = useRef<HTMLDivElement>(null);
-  const location = useLocation();
+  const { merchantUsername } = useParams();
 
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -58,33 +58,29 @@ export default function Navbar() {
   };
 
   const getMerchantDashboardUrl = () => {
-    const merchantId = apiAuth.getCurrentMerchantId();
-    return merchantId ? `/admin/${merchantId}/dashboard` : "/login";
+    const merchantUsername = apiAuth.getCurrentMerchantUsername();
+    return merchantUsername ? `/admin/${merchantUsername}/dashboard` : "/login";
   };
 
   // Check if user button should be visible
   const shouldShowUserButton = () => {
-    const cookieMerchantId = apiAuth.getCurrentMerchantId();
+    const cookieMerchantUsername = apiAuth.getCurrentMerchantUsername();
 
     // If no merchant ID in cookies, don't show user button
-    if (!cookieMerchantId) {
+    if (!cookieMerchantUsername) {
       return false;
     }
+    return true;
+  };
 
-    // For admin routes, check if merchantId in URL matches cookie
-    if (location.pathname.includes("/admin/")) {
-      const adminMerchantId = location.pathname.split("/admin/")[1]?.split("/")[0];
-      return cookieMerchantId === adminMerchantId;
+  // Function to generate URLs with merchant username
+  const generateUrl = (path: string) => {
+    // If we're on a merchant page, use merchant username in URL
+    if (merchantUsername) {
+      return path === "/" ? `/${merchantUsername}` : `/${merchantUsername}/${path}`;
     }
-
-    // For merchant routes, check if merchantId in URL matches cookie
-    if (location.pathname.includes("/merchant/")) {
-      const merchantIdFromPath = location.pathname.split("/merchant/")[1]?.split("/")[0];
-      return cookieMerchantId === merchantIdFromPath;
-    }
-
-    // For other routes (like root, login, register), don't show user button
-    return false;
+    // Otherwise use regular URLs
+    return path === "/" ? "/" : `/${path}`;
   };
 
   const navItems = [
@@ -108,7 +104,7 @@ export default function Navbar() {
     >
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between">
-          <a href="/" className="flex items-center gap-3">
+          <a href={generateUrl("/")} className="flex items-center gap-3">
             <div className="text-xl md:text-2xl font-black text-black uppercase tracking-widest relative">
               <span className="relative z-10">LEATHER STUDIO</span>
               <span className="absolute -bottom-1 left-0 w-1/2 h-1 bg-yellow-600"></span>
@@ -119,7 +115,7 @@ export default function Navbar() {
             {navItems.map((item) => (
               <a
                 key={item.label}
-                href={item.url}
+                href={generateUrl(item.url)}
                 className="text-sm uppercase font-medium hover:text-yellow-600 transition group relative py-2"
               >
                 {item.label}
@@ -226,7 +222,10 @@ export default function Navbar() {
               )}
 
               {/* Wishlist */}
-              <a href="/wishlist" className="hover:text-yellow-600 transition relative p-2 group">
+              <a
+                href={generateUrl("wishlist")}
+                className="hover:text-yellow-600 transition relative p-2 group"
+              >
                 <span className="absolute inset-0 rounded-full bg-gray-50 scale-0 transition-transform duration-200 group-hover:scale-100"></span>
                 <span className="relative">
                   <Heart size={20} />
@@ -252,7 +251,7 @@ export default function Navbar() {
               {navItems.map((item) => (
                 <a
                   key={item.label}
-                  href={item.url}
+                  href={generateUrl(item.url)}
                   className="text-sm uppercase font-medium hover:text-yellow-600 transition py-2 px-2"
                   onClick={() => setMobileMenuOpen(false)}
                 >
@@ -274,8 +273,18 @@ export default function Navbar() {
                   ...(shouldShowUserButton()
                     ? [{ icon: <User size={20} />, label: "Account", badge: null, url: "/account" }]
                     : []),
-                  { icon: <Heart size={20} />, label: "Wishlist", badge: 3, url: "/wishlist" },
-                  { icon: <ShoppingBag size={20} />, label: "Cart", badge: 2, url: "/cart" },
+                  {
+                    icon: <Heart size={20} />,
+                    label: "Wishlist",
+                    badge: 3,
+                    url: generateUrl("wishlist"),
+                  },
+                  {
+                    icon: <ShoppingBag size={20} />,
+                    label: "Cart",
+                    badge: 2,
+                    url: generateUrl("cart"),
+                  },
                 ].map((item, index) => (
                   <a key={index} href={item.url} className="flex flex-col items-center gap-1">
                     <span className="relative">

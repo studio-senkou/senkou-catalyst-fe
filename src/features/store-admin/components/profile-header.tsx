@@ -147,7 +147,7 @@ export function ProfileHeader() {
               <div>
                 <h1 className="text-2xl font-bold text-gray-900">{user.name}</h1>
                 <div className="flex items-center gap-2 mt-1">
-                  <Badge variant={getRoleBadgeVariant(user.role)} className="capitalize">
+                  <Badge variant={getRoleBadgeVariant(user.role ?? "user")} className="capitalize">
                     {user.role}
                   </Badge>
                   <span className="text-sm text-gray-500">ID: {user.id}</span>

@@ -91,51 +91,51 @@ export function ProfileContent() {
   };
 
   const handleSave = async () => {
-    try {
-      setSaving(true);
-      setError(null);
+    // try {
+    //   setSaving(true);
+    //   setError(null);
 
-      // Validate form data
-      if (!editForm.name.trim()) {
-        throw new Error("Name is required");
-      }
-      if (!editForm.email.trim()) {
-        throw new Error("Email is required");
-      }
-      if (!editForm.phone.trim()) {
-        throw new Error("Phone is required");
-      }
+    //   // Validate form data
+    //   if (!editForm.name.trim()) {
+    //     throw new Error("Name is required");
+    //   }
+    //   if (!editForm.email.trim()) {
+    //     throw new Error("Email is required");
+    //   }
+    //   if (!editForm.phone.trim()) {
+    //     throw new Error("Phone is required");
+    //   }
 
-      // Call API to update user
-      const response = await apiUser.updateCurrentUser({
-        name: editForm.name.trim(),
-        email: editForm.email.trim(),
-        phone: editForm.phone.trim(),
-      });
+    //   // Call API to update user
+    //   const response = await apiUser.updateCurrentUser({
+    //     name: editForm.name.trim(),
+    //     email: editForm.email.trim(),
+    //     phone: editForm.phone.trim(),
+    //   });
 
-      // Update local state and cache
-      const updatedUser = response.data.user;
-      setUser(updatedUser);
+    //   // Update local state and cache
+    //   const updatedUser = response.data.user;
+    //   setUser(updatedUser);
 
-      // Update cached data via tokenManager
-      tokenManager.saveUserData({
-        id: updatedUser.id,
-        name: updatedUser.name,
-        email: updatedUser.email,
-        phone: updatedUser.phone,
-        role: updatedUser.role,
-        created_at: updatedUser.created_at,
-        updated_at: updatedUser.updated_at,
-        merchants: updatedUser.merchants || [],
-      });
+    //   // Update cached data via tokenManager
+    //   tokenManager.saveUserData({
+    //     id: updatedUser.id,
+    //     name: updatedUser.name,
+    //     email: updatedUser.email,
+    //     phone: updatedUser.phone,
+    //     role: updatedUser.role,
+    //     created_at: updatedUser.created_at,
+    //     updated_at: updatedUser.updated_at,
+    //     merchants: updatedUser.merchants || [],
+    //   });
 
-      setEditing(false);
-    } catch (err: any) {
-      setError(err.message || "Failed to update profile");
-      console.error("Failed to update user:", err);
-    } finally {
-      setSaving(false);
-    }
+    //   setEditing(false);
+    // } catch (err: any) {
+    //   setError(err.message || "Failed to update profile");
+    //   console.error("Failed to update user:", err);
+    // } finally {
+    //   setSaving(false);
+    // }
   };
 
   const formatDate = (dateString: string) => {

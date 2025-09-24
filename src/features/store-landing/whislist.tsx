@@ -434,7 +434,6 @@ export default function Wishlist() {
                   id={product.id}
                   name={product.name}
                   price={formatPrice(product.price)} // Format price for display
-                  rating={product.rating || "0"}
                   isNew={product.isNew || false}
                   image={product.image || getRandomImage(500, 600)}
                 />

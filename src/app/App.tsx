@@ -9,6 +9,8 @@ import Whislist from "../features/store-landing/whislist";
 import About from "../features/store-landing/about";
 import Login from "../features/login/Login";
 import Register from "../features/register/Register";
+import GoogleAuthCallback from "../features/register/google-callback";
+import EmailVerification from "../features/register/email-verification";
 import Dashboard from "../features/store-admin/dashboard/dashboard";
 import Products from "../features/store-admin/products/products";
 import Categories from "../features/store-admin/categories/categories";
@@ -22,7 +24,7 @@ const useAuthWithRefresh = () => {
 
   const checkAuth = async () => {
     setIsChecking(true);
-    
+
     // First check if already authenticated
     if (apiAuth.isAuthenticated()) {
       setIsAuthenticated(true);
@@ -54,9 +56,9 @@ const AuthLoadingComponent = () => (
   </div>
 );
 
-// Protected Route Component for Merchant Admin Routes (with merchantId)
+// Protected Route Component for Merchant Admin Routes
 const ProtectedMerchantAdminRoute = ({ children }: { children: React.ReactNode }) => {
-  const { merchantId } = useParams<{ merchantId: string }>();
+  const { merchantUsername } = useParams<{ merchantUsername: string }>();
   const { isChecking, isAuthenticated, checkAuth } = useAuthWithRefresh();
   const [hasChecked, setHasChecked] = useState(false);
 
@@ -80,21 +82,21 @@ const ProtectedMerchantAdminRoute = ({ children }: { children: React.ReactNode }
     return <Navigate to="/login" replace />;
   }
 
-  const currentMerchantId = apiAuth.getCurrentMerchantId();
+  const currentMerchantUsername = apiAuth.getCurrentMerchantUsername();
   const userData = apiAuth.getCurrentUserData();
 
   if (userData?.role === "admin") {
     return <Navigate to="/admin/dashboard" replace />;
   }
 
-  if (!merchantId || currentMerchantId !== merchantId) {
+  if (!merchantUsername || currentMerchantUsername !== merchantUsername) {
     return <Navigate to="/login" replace />;
   }
 
   return <>{children}</>;
 };
 
-// Protected Route Component for Super Admin Routes (without merchantId)
+// Protected Route Component for Super Admin Routes (without merchantUsername)
 const ProtectedSuperAdminRoute = ({ children }: { children: React.ReactNode }) => {
   const { isChecking, isAuthenticated, checkAuth } = useAuthWithRefresh();
   const [hasChecked, setHasChecked] = useState(false);
@@ -123,10 +125,10 @@ const ProtectedSuperAdminRoute = ({ children }: { children: React.ReactNode }) =
 
   // Check if user is admin
   if (userData?.role !== "admin") {
-    // If user is not admin but has merchantId, redirect to their merchant dashboard
-    const merchantId = apiAuth.getCurrentMerchantId();
-    if (merchantId) {
-      return <Navigate to={`/admin/${merchantId}/dashboard`} replace />;
+    // If user is not admin but has merchantUsername, redirect to their merchant dashboard
+    const merchantUsername = apiAuth.getCurrentMerchantUsername();
+    if (merchantUsername) {
+      return <Navigate to={`/admin/${merchantUsername}/dashboard`} replace />;
     }
     // Otherwise redirect to login
     return <Navigate to="/login" replace />;
@@ -142,13 +144,15 @@ export default function App() {
       <Route path="/" element={<CatalystLanding />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
+      <Route path="/verify" element={<EmailVerification />} />
+      <Route path="/auth/callback/google" element={<GoogleAuthCallback />} />
 
       {/* Public Merchant Routes */}
-      <Route path="/merchant/:id/home" element={<Home />} />
-      <Route path="/merchant/:id/collections" element={<Collections />} />
-      <Route path="/merchant/:id/details/:id" element={<ProductDetails />} />
-      <Route path="/merchant/:id/wishlist" element={<Whislist />} />
-      <Route path="/merchant/:id/about" element={<About />} />
+      <Route path="/:merchantUsername" element={<Home />} />
+      <Route path="/:merchantUsername/collections" element={<Collections />} />
+      <Route path="/:merchantUsername/details/:id" element={<ProductDetails />} />
+      <Route path="/:merchantUsername/wishlist" element={<Whislist />} />
+      <Route path="/:merchantUsername/about" element={<About />} />
 
       {/* Protected Super Admin Routes (for role: admin) */}
       <Route
@@ -184,9 +188,9 @@ export default function App() {
         }
       />
 
-      {/* Protected Merchant Admin Routes (for non-admin users with merchantId) */}
+      {/* Protected Merchant Admin Routes (for non-admin users with merchantUsername) */}
       <Route
-        path="/admin/:merchantId/dashboard"
+        path="/admin/:merchantUsername/dashboard"
         element={
           <ProtectedMerchantAdminRoute>
             <Dashboard />
@@ -194,7 +198,7 @@ export default function App() {
         }
       />
       <Route
-        path="/admin/:merchantId/products"
+        path="/admin/:merchantUsername/products"
         element={
           <ProtectedMerchantAdminRoute>
             <Products />
@@ -202,7 +206,7 @@ export default function App() {
         }
       />
       <Route
-        path="/admin/:merchantId/categories"
+        path="/admin/:merchantUsername/categories"
         element={
           <ProtectedMerchantAdminRoute>
             <Categories />
@@ -210,7 +214,7 @@ export default function App() {
         }
       />
       <Route
-        path="/admin/:merchantId/profile"
+        path="/admin/:merchantUsername/profile"
         element={
           <ProtectedMerchantAdminRoute>
             <Profile />

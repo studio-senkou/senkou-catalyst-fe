@@ -79,8 +79,8 @@ import {
 } from "lucide-react";
 import AddProductModal from "./add-product";
 import EditProductModal from "./edit-product";
-import { apiProduct, type Product } from "./api/api-product";
-import { apiCategory, type Category } from "../categories/api/api-category";
+import { apiProduct } from "./api/api-product";
+import { apiCategory } from "../categories/api/api-category";
 import { apiAuth } from "@/api/api-auth";
 
 // Column helper for type safety
@@ -111,6 +111,7 @@ export default function Products(): React.ReactElement {
 
   // Get merchantID from auth
   const merchantID = apiAuth.getCurrentMerchantId() || "";
+  const merchantUsername = apiAuth.getCurrentMerchantUsername() || "";
 
   // Load data on component mount
   useEffect(() => {
@@ -124,11 +125,11 @@ export default function Products(): React.ReactElement {
   }, [merchantID]);
 
   const loadProducts = async (): Promise<void> => {
-    if (!merchantID) return;
+    if (!merchantUsername) return;
 
     try {
       setIsLoading(true);
-      const response = await apiProduct.getProductsByMerchant(merchantID);
+      const response = await apiProduct.getProductsByMerchant(merchantUsername);
       setProducts(response.data.products);
     } catch (error: any) {
       toast.error(error.message || "Failed to load products");
@@ -139,11 +140,11 @@ export default function Products(): React.ReactElement {
   };
 
   const loadCategories = async (): Promise<void> => {
-    if (!merchantID) return;
+    if (!merchantUsername) return;
 
     try {
       setIsLoadingCategories(true);
-      const response = await apiCategory.getCategories(merchantID);
+      const response = await apiCategory.getCategories(merchantUsername);
       setCategories(response.data.categories);
     } catch (error: any) {
       console.error("Failed to load categories:", error);

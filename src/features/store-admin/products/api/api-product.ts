@@ -1,87 +1,5 @@
 import api, { tokenManager } from "@/lib/axios";
 
-// Types for Product API
-export interface Product {
-  id: string;
-  merchant_id: string;
-  category_id: number;
-  title: string;
-  price: string;
-  description: string;
-  affiliate_url: string;
-  photos: string[];
-  created_at?: string;
-  updated_at?: string;
-}
-
-export interface CreateProductRequest {
-  title: string;
-  description?: string;
-  price: string;
-  affiliate_url: string;
-  category_id?: number;
-}
-
-export interface UpdateProductRequest {
-  title?: string;
-  description?: string;
-  price?: string;
-  affiliate_url?: string;
-  category_id?: number;
-}
-
-export interface ProductInteractionRequest {
-  // Define based on your SendProductInteractionDTO
-  interaction_type: string;
-  [key: string]: any;
-}
-
-export interface CreateProductResponse {
-  message: string;
-  data: {
-    product: Product;
-  };
-}
-
-export interface GetProductResponse {
-  message: string;
-  data: {
-    product: Product;
-  };
-}
-
-export interface GetProductsResponse {
-  message: string;
-  data: {
-    products: Product[];
-    pagination?: {
-      page: number;
-      limit: number;
-      total: number;
-      total_pages: number;
-    };
-  };
-}
-
-export interface UpdateProductResponse {
-  message: string;
-  data: {
-    product: Product;
-  };
-}
-
-export interface DeleteProductResponse {
-  message: string;
-}
-
-export interface UploadPhotoResponse {
-  message: string;
-}
-
-export interface ProductInteractionResponse {
-  message: string;
-}
-
 export interface QueryParams {
   page?: number;
   limit?: number;
@@ -255,14 +173,14 @@ export const apiProduct = {
   },
 
   // Get products by merchant ID
-  async getProductsByMerchant(merchantID: string): Promise<GetProductsResponse> {
+  async getProductsByMerchant(merchantUsername: string): Promise<GetProductsResponse> {
     try {
-      if (!merchantID) {
+      if (!merchantUsername) {
         throw new Error("Merchant ID is required");
       }
 
       const response = await api.get<GetProductsResponse>(
-        `/merchants/${merchantID}/products`
+        `/merchants/${merchantUsername}/products`
       );
       
       return response.data;

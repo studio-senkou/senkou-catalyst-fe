@@ -20,9 +20,9 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Upload, X, Loader2, Plus } from "lucide-react";
 import { toast } from "sonner";
-import { apiProduct, type Product, type UpdateProductRequest } from "./api/api-product";
+import { apiProduct } from "./api/api-product";
 import { apiAuth } from "@/api/api-auth";
-import { apiCategory, type Category } from "../categories/api/api-category";
+import { apiCategory } from "../categories/api/api-category";
 
 interface EditProductModalProps {
   open: boolean;
@@ -515,7 +515,6 @@ const EditProductModal: React.FC<EditProductModalProps> = ({
               type="number"
               placeholder="0"
               min="0"
-              step="1000"
               value={formData.price}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                 handleInputChange("price", e.target.value)

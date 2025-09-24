@@ -20,8 +20,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Upload, X, Loader2, Plus } from "lucide-react";
 import { toast } from "sonner";
-import { apiProduct, type CreateProductRequest } from "./api/api-product";
-import { apiCategory, type Category } from "../categories/api/api-category";
+import { apiProduct } from "./api/api-product";
+import { apiCategory} from "../categories/api/api-category";
 import { apiAuth } from "@/api/api-auth";
 
 interface AddProductModalProps {
@@ -30,7 +30,7 @@ interface AddProductModalProps {
   onSubmit: () => void;
   categories: Category[];
   isLoadingCategories: boolean;
-  onCategoriesUpdate: () => void; 
+  onCategoriesUpdate: () => void;
 }
 
 interface ProductFormData {
@@ -384,7 +384,6 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
               type="number"
               placeholder="0"
               min="0"
-              step="1000"
               value={formData.price}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                 handleInputChange("price", e.target.value)

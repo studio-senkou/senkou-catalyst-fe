@@ -1,47 +1,5 @@
 import api, { tokenManager } from "@/lib/axios";
 
-// Types for Category API
-export interface Category {
-  id: number;
-  name: string;
-  merchant_id: string;
-  created_at?: string;
-  updated_at?: string;
-}
-
-export interface CreateCategoryRequest {
-  name: string;
-}
-
-export interface UpdateCategoryRequest {
-  name: string;
-}
-
-export interface CreateCategoryResponse {
-  message: string;
-  data: {
-    category: Category;
-  };
-}
-
-export interface GetCategoriesResponse {
-  message: string;
-  data: {
-    categories: Category[];
-  };
-}
-
-export interface UpdateCategoryResponse {
-  message: string;
-  data: {
-    category: Category;
-  };
-}
-
-export interface DeleteCategoryResponse {
-  message: string;
-}
-
 export interface ApiErrorResponse {
   message: string;
   errors?: string[];
@@ -84,13 +42,13 @@ export const apiCategory = {
   },
 
   // Get all categories for a merchant
-  async getCategories(merchantID: string): Promise<GetCategoriesResponse> {
+  async getCategories(merchantUsername: string): Promise<GetCategoriesResponse> {
     try {
-      if (!merchantID) {
+      if (!merchantUsername) {
         throw new Error("Merchant ID is required");
       }
 
-      const response = await api.get<GetCategoriesResponse>(`/merchants/${merchantID}/categories`);
+      const response = await api.get<GetCategoriesResponse>(`/merchants/${merchantUsername}/categories`);
       return response.data;
     } catch (error: any) {
       if (error.response?.status === 401) {

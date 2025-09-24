@@ -2,24 +2,6 @@
 export {};
 
 declare global {
-  // Updated Product interface for admin panel
-  // interface Product {
-  //   id: string;
-  //   name: string;
-  //   category: string;
-  //   price: number | string; // Changed to number for admin calculations
-  //   stock?: number;
-  //   status?: string;
-  //   image: string;
-  //   description?: string;
-  //   brand?: string;
-  //   // Keep existing fields for compatibility
-  //   rating?: string;
-  //   isNew?: boolean;
-  //   bgColor?: string;
-  //   originalPrice?: string;
-  //   discount?: string;
-  // }
 
   interface Product {
     id: string;
@@ -32,6 +14,74 @@ declare global {
     photos: string[];
     created_at?: string;
     updated_at?: string;
+  }
+
+  interface CreateProductRequest {
+    title: string;
+    description?: string;
+    price: string;
+    affiliate_url: string;
+    category_id?: number;
+  }
+  
+  interface UpdateProductRequest {
+    title?: string;
+    description?: string;
+    price?: string;
+    affiliate_url?: string;
+    category_id?: number;
+  }
+  
+  interface ProductInteractionRequest {
+    // Define based on your SendProductInteractionDTO
+    interaction_type: string;
+    [key: string]: any;
+  }
+  
+  interface CreateProductResponse {
+    message: string;
+    data: {
+      product: Product;
+    };
+  }
+  
+  interface GetProductResponse {
+    message: string;
+    data: {
+      product: Product;
+    };
+  }
+  
+  interface GetProductsResponse {
+    message: string;
+    data: {
+      products: Product[];
+      pagination?: {
+        page: number;
+        limit: number;
+        total: number;
+        total_pages: number;
+      };
+    };
+  }
+  
+  interface UpdateProductResponse {
+    message: string;
+    data: {
+      product: Product;
+    };
+  }
+  
+  interface DeleteProductResponse {
+    message: string;
+  }
+  
+  interface UploadPhotoResponse {
+    message: string;
+  }
+  
+  interface ProductInteractionResponse {
+    message: string;
   }
 
   // New interface for adding products
@@ -73,12 +123,28 @@ declare global {
     password: string;
   }
 
+  // Updated RegisterRequest to match backend DTO
   interface RegisterRequest {
     name: string;
+    merchant_username: string; 
     email: string;
     phone: string;
     password: string;
     password_confirmation: string;
+  }
+
+  // New interface for account activation
+  interface ActivateAccountRequest {
+    token: string;
+  }
+
+  // Query parameters for users endpoint
+  interface UserQueryParams {
+    page?: number;
+    limit?: number;
+    sort?: string;
+    order?: 'asc' | 'desc';
+    search?: string;
   }
 
   interface RefreshTokenRequest {
@@ -94,20 +160,33 @@ declare global {
   interface Merchant {
     id: string;
     name: string;
+    username?: string; // Added username field
     owner_id: number;
     created_at: string;
     updated_at: string;
   }
 
+  // Updated User interface to match backend model
   interface User {
     id: number;
     name: string;
     email: string;
     phone: string;
-    role: string;
+    role?: string; 
+    email_verified_at?: string; 
     created_at: string;
     updated_at: string;
     merchants?: Merchant[];
+  }
+
+  // Pagination response structure
+  interface PaginationResponse {
+    current_page: number;
+    per_page: number;
+    total: number;
+    total_pages: number;
+    has_next: boolean;
+    has_prev: boolean;
   }
 
   interface LoginResponse {
@@ -118,10 +197,10 @@ declare global {
       refresh_token: string;
       refresh_token_expiry: string;
       user: User;
-      merchantId: string;
     };
   }
 
+  // Updated RegisterResponse to match backend response
   interface RegisterResponse {
     message: string;
     data: {
@@ -129,10 +208,17 @@ declare global {
     };
   }
 
+  // New interface for account activation response
+  interface ActivateAccountResponse {
+    message: string;
+  }
+
+  // Updated GetUsersResponse to include pagination
   interface GetUsersResponse {
     message: string;
     data: {
       users: User[];
+      pagination: PaginationResponse;
     };
   }
 
@@ -162,5 +248,55 @@ declare global {
 
   interface LogoutResponse {
     message: string;
+  }
+
+  // category
+  interface Category {
+    id: number;
+    name: string;
+    merchant_id: string;
+    created_at?: string;
+    updated_at?: string;
+  }
+  
+  interface CreateCategoryRequest {
+    name: string;
+  }
+  
+  interface UpdateCategoryRequest {
+    name: string;
+  }
+  
+  interface CreateCategoryResponse {
+    message: string;
+    data: {
+      category: Category;
+    };
+  }
+  
+  interface GetCategoriesResponse {
+    message: string;
+    data: {
+      categories: Category[];
+    };
+  }
+  
+  interface UpdateCategoryResponse {
+    message: string;
+    data: {
+      category: Category;
+    };
+  }
+  
+  interface DeleteCategoryResponse {
+    message: string;
+  }
+
+
+
+  interface ErrorResponse {
+    message: string;
+    error?: string;
+    errors?: { [key: string]: string }; 
   }
 }

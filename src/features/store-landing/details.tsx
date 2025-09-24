@@ -13,7 +13,7 @@ import {
 import Navbar from "./components/sections/navbar";
 import Footer from "./components/sections/footer";
 import Announcement from "./components/sections/announcement";
-import { apiProduct, type Product } from "../store-admin/products/api/api-product";
+import { apiProduct } from "../store-admin/products/api/api-product";
 
 export default function ProductDetails() {
   const { id } = useParams<{ id: string }>();

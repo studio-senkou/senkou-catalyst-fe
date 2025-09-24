@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2 } from "lucide-react";
-import { apiCategory, type Category } from "./api/api-category";
+import { apiCategory } from "./api/api-category";
 
 interface EditCategoryModalProps {
   open: boolean;

@@ -5,9 +5,8 @@ import Footer from "./components/sections/footer";
 import Announcement from "./components/sections/announcement";
 import ProductCard from "./components/productCard";
 import { Filter, ChevronDown, ChevronUp, ChevronLeft, ChevronRight } from "lucide-react";
-import { apiProduct, type Product } from "../store-admin/products/api/api-product";
-import { apiAuth } from "@/api/api-auth";
-
+import { apiProduct } from "../store-admin/products/api/api-product";
+import { useParams } from "react-router-dom";
 // Utility functions
 const getNumericPrice = (price: string | number): number => {
   if (typeof price === "number") return price;
@@ -28,7 +27,6 @@ interface ProductCardData {
   id: string;
   name: string;
   price: string;
-  rating: string;
   isNew: boolean;
   image: string;
 }
@@ -55,14 +53,13 @@ const transformProduct = (apiProduct: Product): ProductCardData => {
     id: apiProduct.id,
     name: apiProduct.title,
     price: formatPrice(apiProduct.price),
-    rating: "4.5", // Default rating since API doesn't provide it
     isNew,
     image,
   };
 };
 
 export default function Collection() {
-  const merchantID = apiAuth.getCurrentMerchantId() || "";
+  const { merchantUsername } = useParams();
 
   // Products state
   const [products, setProducts] = useState<Product[]>([]);
@@ -95,7 +92,7 @@ export default function Collection() {
   // Fetch products from API
   useEffect(() => {
     const fetchProducts = async () => {
-      if (!merchantID) {
+      if (!merchantUsername) {
         setError("Merchant ID not found");
         setLoading(false);
         return;
@@ -103,7 +100,7 @@ export default function Collection() {
 
       try {
         setLoading(true);
-        const response = await apiProduct.getProductsByMerchant(merchantID);
+        const response = await apiProduct.getProductsByMerchant(merchantUsername);
         setProducts(response.data.products);
         setError(null);
       } catch (err) {
@@ -115,7 +112,7 @@ export default function Collection() {
     };
 
     fetchProducts();
-  }, [merchantID]);
+  }, [merchantUsername]);
 
   // Apply filters whenever filter state changes
   useEffect(() => {

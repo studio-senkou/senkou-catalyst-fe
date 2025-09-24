@@ -17,7 +17,8 @@ export const clearAuth = (): void => {
   if (typeof window !== 'undefined') {
     CookieManager.removeCookie('accessToken', { path: '/' });
     CookieManager.removeCookie('refreshToken', { path: '/' });
-    CookieManager.removeCookie('merchantId', { path: '/' });
+    CookieManager.removeCookie('merchantUsername', { path: '/' });
+    CookieManager.removeCookie('merchantID', { path: '/' });
     CookieManager.removeCookie('userData', { path: '/' });
   }
 };

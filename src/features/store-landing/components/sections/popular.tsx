@@ -30,7 +30,6 @@ export default function Popular({ getRandomImage }: CategoryProps) {
               id={product.id}
               name={product.name}
               price={product.price}
-              rating={product.rating}
               isNew={product.isNew || false}
               image={getRandomImage(500, 600)}
             />

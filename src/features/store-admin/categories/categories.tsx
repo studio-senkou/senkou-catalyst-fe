@@ -71,7 +71,7 @@ import {
 import { toast } from "sonner";
 import AddCategoryModal from "./add-category";
 import EditCategoryModal from "./edit-category";
-import { apiCategory, type Category } from "./api/api-category";
+import { apiCategory } from "./api/api-category";
 import { apiAuth } from "@/api/api-auth";
 
 // Category interface
@@ -100,6 +100,7 @@ export default function Categories(): React.ReactElement {
 
   // You'll need to get this from your auth context or props
   const merchantID = apiAuth.getCurrentMerchantId() || "";
+  const merchantUsername = apiAuth.getCurrentMerchantUsername() || "";
 
   // Fetch categories on component mount
   useEffect(() => {
@@ -109,7 +110,7 @@ export default function Categories(): React.ReactElement {
   const fetchCategories = async (): Promise<void> => {
     try {
       setIsLoading(true);
-      const response = await apiCategory.getCategories(merchantID);
+      const response = await apiCategory.getCategories(merchantUsername);
       setCategories(response.data.categories);
       toast.success("Categories loaded successfully");
     } catch (error: any) {

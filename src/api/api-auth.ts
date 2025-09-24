@@ -6,7 +6,8 @@ export const apiAuth = {
   async login(credentials: LoginRequest): Promise<{
     loginResponse: LoginResponse;
     userResponse: GetUserDetailResponse;
-    merchantId?: string; 
+    merchantUsername?: string; 
+    merchantID?: string; 
   }> {
     try {
       const loginResponse = await api.post<LoginResponse>('/auth/login', credentials);
@@ -26,10 +27,11 @@ export const apiAuth = {
       );
 
       const userResponse = await apiUser.getCurrentUser();
-      
       const user = userResponse.data.user;
-      let merchantId: string | undefined;
-      
+
+      let merchantUsername: string | undefined;
+      let merchantID: string | undefined;
+
       if (user.role === 'admin') {
         tokenManager.saveUserData({
           id: user.id,
@@ -39,14 +41,20 @@ export const apiAuth = {
           role: user.role,
           merchants: user.merchants || []
         });
-        
-        merchantId = undefined;
+
       } else {
         if (user.merchants && user.merchants.length > 0) {
-          merchantId = user.merchants[0].id;
-          
-          tokenManager.saveMerchantId(merchantId);
-          
+          const merchant = user.merchants[0];
+          if (!merchant.username) {
+            throw new Error('Merchant has no username');
+          }
+
+          merchantUsername = merchant.username;
+          merchantID = merchant.id; // <-- isi merchantID dari objek merchant
+
+          tokenManager.saveMerchantUsername(merchantUsername); 
+          tokenManager.saveMerchantID(merchantID); 
+
           tokenManager.saveUserData({
             id: user.id,
             name: user.name,
@@ -63,13 +71,15 @@ export const apiAuth = {
       return {
         loginResponse: loginResponse.data,
         userResponse: userResponse,
-        merchantId: merchantId
+        merchantUsername,
+        merchantID
       };
     } catch (error: any) {
       tokenManager.clearTokens();
       throw new Error(error.response?.data?.message || 'Login failed');
     }
   },
+
 
   async refreshToken(): Promise<RefreshTokenResponse> {
     try {
@@ -80,8 +90,16 @@ export const apiAuth = {
         const user = userResponse.data.user;
         
         if (user.role !== 'admin' && user.merchants && user.merchants.length > 0) {
-          const merchantId = user.merchants[0].id;
-          tokenManager.saveMerchantId(merchantId);
+          const merchant = user.merchants[0];
+          if (!merchant.username) {
+            throw new Error('Merchant has no username');
+          }
+
+          const merchantUsername = merchant.username;
+          const merchantID = merchant.id;
+
+          tokenManager.saveMerchantUsername(merchantUsername);
+          tokenManager.saveMerchantID(merchantID);
         }
         
         tokenManager.saveUserData({
@@ -109,6 +127,7 @@ export const apiAuth = {
       throw new Error(error.response?.data?.message || 'Token refresh failed');
     }
   },
+
 
   // Logout user
   async logout(): Promise<LogoutResponse> {
@@ -148,13 +167,20 @@ export const apiAuth = {
     return tokenManager.getAccessToken();
   },
 
-  getCurrentMerchantId(): string | null {
+  getCurrentMerchantUsername(): string | null {
     const userData = tokenManager.getUserData();
-    // Return null for admin users since they don't need merchant ID
     if (userData?.role === 'admin') {
       return null;
     }
-    return tokenManager.getMerchantId();
+    return tokenManager.getMerchantUsername();
+  },
+
+  getCurrentMerchantId(): string | null {
+    const userData = tokenManager.getUserData();
+    if (userData?.role === 'admin') {
+      return null;
+    }
+    return tokenManager.getMerchantID();
   },
 
   // Get current user data
